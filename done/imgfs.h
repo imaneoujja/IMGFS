@@ -49,6 +49,32 @@ extern "C" {
  * **********************************************************************
  */
 
+struct imgfs_header {
+    char name[MAX_IMGFS_NAME + 1]; 
+    uint32_t version;
+    uint32_t nb_files;
+    uint32_t max_files;
+    uint16_t resized_res[(NB_RES - 1) * 2]; 
+    uint32_t unused_32;
+    uint64_t unused_64;
+};
+
+struct img_metadata {
+    char img_id[MAX_IMG_ID + 1]; 
+    unsigned char SHA[SHA256_DIGEST_LENGTH];
+    uint32_t orig_res[2];
+    uint32_t size[NB_RES];
+    uint64_t offset[NB_RES];
+    uint16_t is_valid;
+    uint16_t unused_16;
+};
+
+struct imgfs_file {
+    FILE* file;
+    struct imgfs_header header;
+    struct img_metadata* metadata;
+};
+
 /**
  * @brief Prints imgFS header informations.
  *
