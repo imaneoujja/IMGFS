@@ -47,8 +47,8 @@ int main(int argc, char* argv[])
          */
         for (i = 0; i < NUM_COMMANDS; i++) {
             if (strcmp(argv[0], commands[i].name) == 0) {
-                ret = commands[i].function(argc, argv);
                 i = NUM_COMMANDS;
+                ret = commands[i].function(argc, argv);
             }
         }
 
