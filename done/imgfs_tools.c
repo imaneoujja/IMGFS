@@ -67,18 +67,112 @@ ORIGINAL: %" PRIu32 " x %" PRIu32 "\n",
     printf("*****************************************\n");
 }
 
-void do_open(const char * img_name,const char * open_mode, imgfs_file read_img){
-    M_REQUIRE_NON_NULL(img_name);
+/**
+ * @brief Open imgFS file, read the header and all the metadata.
+ *
+ * @param imgfs_filename Path to the imgFS file
+ * @param open_mode Mode for fopen(), eg.: "rb", "rb+", etc.
+ * @param imgfs_file Structure for header, metadata and file pointer.
+ */
+int do_open(const char* imgfs_filename,
+            const char* open_mode,
+            struct imgfs_file* imgfs_file){
+    M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(open_mode);
+
     FILE *filePointer;
-    filePointer = fopen(img_name, open_mode);
-    if (filePointer == NULL) {
-        return 1; // Return an error code
+
+    if (imgfs_file == NULL) {
+        return ERR_INVALID_ARGUMENT; // Return an error code
     }
+    filePointer = fopen(imgfs_filename, open_mode);
+    if (filePointer== NULL) {
+        return ERR_IO; // Return an error code
+    }
+
+    imgfs_file->file= filePointer;
+    size_t bytes_read = fread(imgfs_file->header.name, sizeof(char),MAX_IMGFS_NAME + 1,filePointer);
+    if (bytes_read != MAX_IMGFS_NAME+1){
+        return ERR_IO;
+    }
+    bytes_read = fread(&imgfs_file->header.version, sizeof(uint32_t),1,filePointer);
+    if (bytes_read != 1){
+        return ERR_IO;
+    }
+    bytes_read = fread(&imgfs_file->header.nb_files,sizeof(uint32_t),1,filePointer);
+    if (bytes_read != 1){
+        return ERR_IO;
+    }
+    bytes_read = fread(&imgfs_file->header.max_files,sizeof(uint32_t ),1,filePointer);
+    if (bytes_read != 1){
+        return ERR_IO;
+    }
+    bytes_read = fread(imgfs_file->header.resized_res,sizeof(uint16_t),(NB_RES - 1) * 2,filePointer);
+    if (bytes_read != (NB_RES - 1) * 2){
+        return ERR_IO;
+    }
+    bytes_read = fread(&imgfs_file->header.unused_32,sizeof(uint32_t),1,filePointer);
+    if (bytes_read != 1){
+        return ERR_IO;
+    }
+    bytes_read = fread(&imgfs_file->header.unused_64,sizeof(uint64_t),1,filePointer);
+    if (bytes_read != 1){
+        return ERR_IO;
+    }
+
+    int num_files = imgfs_file->header.nb_files;
+    imgfs_file->metadata = calloc(num_files,sizeof(struct img_metadata));
+    if (imgfs_file->metadata == NULL){
+        return ERR_OUT_OF_MEMORY;
+    }
+    for (int i = 0;i<num_files;i++){
+        bytes_read = fread(imgfs_file->metadata[i].img_id, sizeof(char),MAX_IMG_ID + 1,filePointer);
+        if (bytes_read != MAX_IMG_ID+1){
+            return ERR_IO;
+        }
+        bytes_read = fread(imgfs_file->metadata[i].SHA, sizeof(unsigned char),SHA256_DIGEST_LENGTH,filePointer);
+        if (bytes_read != SHA256_DIGEST_LENGTH){
+            return ERR_IO;
+        }
+        bytes_read = fread(imgfs_file->metadata[i].orig_res, sizeof(uint32_t),2,filePointer);
+        if (bytes_read != 2){
+            return ERR_IO;
+        }
+        bytes_read = fread(imgfs_file->metadata[i].size, sizeof(uint32_t),NB_RES,filePointer);
+        if (bytes_read != NB_RES){
+            return ERR_IO;
+        }
+        bytes_read = fread(imgfs_file->metadata[i].offset, sizeof(uint64_t),NB_RES,filePointer);
+        if (bytes_read != NB_RES){
+            return ERR_IO;
+        }
+        bytes_read = fread(&imgfs_file->metadata[i].is_valid,sizeof(uint16_t ),1,filePointer);
+        if (bytes_read != 1){
+            return ERR_IO;
+        }
+        bytes_read = fread(&imgfs_file->metadata[i].unused_16,sizeof(uint16_t),1,filePointer);
+        if (bytes_read != 1){
+            return ERR_IO;
+        }
+    }
+
     return ERR_NONE;
 }
-imgfs_file do_close(imgfs_file read_img){
-    
+
+/**
+ * @brief Do some clean-up for imgFS file handling.
+ *
+ * @param imgfs_file Structure for header, metadata and file pointer to be freed/closed.
+ */
+void do_close(struct imgfs_file* imgfs_file){
+    if (imgfs_file!=NULL ){
+        if (imgfs_file->file !=NULL){
+            fclose(imgfs_file->file);
+        }
+
+        free(imgfs_file->metadata);
+        imgfs_file->metadata= NULL;
+    }
 
 }
 
