@@ -41,11 +41,12 @@ int help(int useless _unused, char** useless_too _unused)
  ********************************************************************** */
 int do_list_cmd(int argc, char** argv)
 {
-    if (argv[1] != NULL){
-        return ERR_INVALID_COMMAND;
-    }
+
     M_REQUIRE_NON_NULL(argv);
     M_REQUIRE_NON_NULL(argv[0]);
+    if (argc !=1 ){
+        return ERR_INVALID_COMMAND;
+    }
     struct imgfs_file file;
     int err = do_open(argv[0],
                       "rb",
@@ -54,6 +55,7 @@ int do_list_cmd(int argc, char** argv)
         enum do_list_mode output_mode = STDOUT;
         err = do_list(&file,output_mode, NULL);
     }
+
     do_close(&file);
     return err;
 }

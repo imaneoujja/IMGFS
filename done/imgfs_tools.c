@@ -81,7 +81,6 @@ int do_open(const char* imgfs_filename,
     M_REQUIRE_NON_NULL(open_mode);
 
     FILE *filePointer;
-
     if (imgfs_file == NULL) {
         return ERR_INVALID_ARGUMENT; // Return an error code
     }
@@ -168,10 +167,13 @@ void do_close(struct imgfs_file* imgfs_file){
     if (imgfs_file!=NULL ){
         if (imgfs_file->file !=NULL){
             fclose(imgfs_file->file);
+            imgfs_file->file = NULL;
+        }
+        if (imgfs_file->metadata !=NULL){
+            free(imgfs_file->metadata);
+            imgfs_file->metadata= NULL;
         }
 
-        free(imgfs_file->metadata);
-        imgfs_file->metadata= NULL;
     }
 
 }
