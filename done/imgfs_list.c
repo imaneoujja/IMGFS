@@ -37,6 +37,7 @@ int do_list(const struct imgfs_file* imgfs_file,
         }
     }
     else{
+        M_REQUIRE_NON_NULL(json);
         TO_BE_IMPLEMENTED();
     }
     return ERR_NONE;
