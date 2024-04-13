@@ -11,7 +11,7 @@
 
 # Note: builds with address sanitizer by default
 
-TEST_DIR = $(PWD)/../provided/tests
+TEST_DIR = ../provided/tests
 
 ## You can change the tag to run week07, week08, etc.
 IMAGE := chappeli/cs202-feedback:latest

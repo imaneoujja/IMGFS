@@ -41,27 +41,29 @@ int main(int argc, char* argv[])
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
     } else {
 
-        int i;
-        for (i = 0; i < NUM_COMMANDS; i++) {
+        int j=0;
+        argc -- ; argv++;
+        for (int i = 0; i < NUM_COMMANDS; i++) {
             if (strcmp(argv[0], commands[i].name) == 0) {
-                i = NUM_COMMANDS;
                 ret = commands[i].function(argc, argv);
+                printf(ret);
+                j=1;
             }
         }
 
-        // If command not found, call help() and return ERR_INVALID_COMMAND
-        if (i == NUM_COMMANDS) {
+        if (!j) {
             help(argc,argv);
             ret = ERR_INVALID_COMMAND;
         }
 
-        argc--; argv++; // skips command call name
+        
     }
 
     if (ret) {
         fprintf(stderr, "ERROR: %s\n", ERR_MSG(ret));
         help(argc, argv);
     }
+    
 
     return ret;
 }
