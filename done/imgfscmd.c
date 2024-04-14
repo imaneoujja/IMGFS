@@ -41,17 +41,17 @@ int main(int argc, char* argv[])
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
     } else {
 
-        int j=0;
+        int foundCommand=0;
         argc -- ; argv++;
         for (int i = 0; i < NUM_COMMANDS; i++) {
             if (strcmp(argv[0], commands[i].name) == 0) {
                 ret = commands[i].function(argc, argv);
                 printf(ret);
-                j=1;
+                foundCommand=1;
             }
         }
 
-        if (!j) {
+        if (!foundCommand) {
             help(argc,argv);
             ret = ERR_INVALID_COMMAND;
         }
