@@ -48,6 +48,8 @@ int do_list_cmd(int argc, char** argv)
         return ERR_INVALID_COMMAND;
     }
     struct imgfs_file file;
+    file.file = NULL;
+    file.metadata = NULL;
     int err = do_open(argv[0],
                       "rb",
                       &file);
