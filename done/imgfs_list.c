@@ -12,26 +12,24 @@
  *      It will be dynamically allocated by the function. Ignored for other output modes.
  * @return some error code.
  */
-int do_list(const struct imgfs_file* imgfs_file,
-            enum do_list_mode output_mode, char** json){
+int do_list(const struct imgfs_file *imgfs_file,
+            enum do_list_mode output_mode, char **json) {
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
-    if (output_mode == STDOUT){
+    if (output_mode == STDOUT) {
         print_header(&imgfs_file->header);
-        if (imgfs_file->header.nb_files == 0){
+        if (imgfs_file->header.nb_files == 0) {
             printf("<< empty imgFS >>\n");
-        }
-        else{
-            for(int i = 0; i<imgfs_file->header.nb_files;i++){
-                if (imgfs_file->metadata[i].is_valid == NON_EMPTY){
+        } else {
+            for (int i = 0; i < imgfs_file->header.nb_files; i++) {
+                if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
                     print_metadata(&(imgfs_file->metadata[i]));
                 }
             }
 
         }
-    }
-    else{
+    } else {
         M_REQUIRE_NON_NULL(json);
         TO_BE_IMPLEMENTED();
     }

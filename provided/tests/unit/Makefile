@@ -3,7 +3,7 @@
 
 CC = clang
 
-TARGETS := imgfsstruct imgfstools imgfslist
+TARGETS := imgfsstruct imgfstools imgfslist imgfscreate
 
 CFLAGS += -g
 
@@ -14,7 +14,7 @@ LDLIBS   += -fsanitize=address
 CFLAGS	 += $(shell pkg-config --cflags vips)
 LDLIBS	 += $(shell pkg-config --libs vips)
 
-EXECS=$(foreach name,$(TARGETS),unit-test-$(name))g
+EXECS=$(foreach name,$(TARGETS),unit-test-$(name))
 
 .PHONY: unit-tests all $(TARGETS) execs
 

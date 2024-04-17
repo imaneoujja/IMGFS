@@ -71,15 +71,15 @@ int do_list_cmd(int argc, char** argv)
 int do_create_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
-    if (argc < 2) {
-        return ERR_NONE;
-    }
-    M_REQUIRE_NON_NULL(argv[1]);
-    puts("Create");
 
     struct imgfs_file file;
     int resized_res_i = 0;
     int max_size;
+    file.header.max_files = default_max_files;
+    file.header.resized_res[2 * THUMB_RES] = default_thumb_res;
+    file.header.resized_res[2 * THUMB_RES + 1] = default_thumb_res;
+    file.header.resized_res[2 * SMALL_RES] = default_small_res;
+    file.header.resized_res[2 * SMALL_RES + 1] = default_small_res;
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], MAX_FILES_OPTION) == 0) {
             if (i + 1 >= argc) {
@@ -97,24 +97,26 @@ int do_create_cmd(int argc, char** argv)
             if (i + 2 >= argc) {
                 return ERR_NOT_ENOUGH_ARGUMENTS;
             }
-            file.header.resized_res[resized_res_i] = atouint16(argv[i + 1]);
-            file.header.resized_res[resized_res_i + 1] = atouint16(argv[i + 2]);
             if (strcmp(argv[i], THUMB_RES_OPTION) == 0) {
                 max_size = MAX_THUMB_RES;
+                resized_res_i = THUMB_RES;
             }
             else{
                 max_size = MAX_SMALL_RES;
+                resized_res_i = SMALL_RES;
             }
+            file.header.resized_res[2*resized_res_i] = atouint16(argv[i + 1]);
+            file.header.resized_res[2*resized_res_i + 1] = atouint16(argv[i + 2]);
             if (file.header.resized_res[resized_res_i]  == 0 || file.header.resized_res[resized_res_i+1] == 0 || file.header.resized_res[resized_res_i] > max_size || file.header.resized_res[resized_res_i+1] > max_size) {
                 return ERR_RESOLUTIONS;
             }
-            resized_res_i += 2;
             i += 2;
         } else {
             return ERR_INVALID_ARGUMENT;
         }
     }
-    int err = do_create(argv[1],&file);
+    int err = do_create(argv[0],&file);
+    do_close(&file);
     return err;
 }
 
