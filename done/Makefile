@@ -1,201 +1,130 @@
-# Makefile for CS-202 course - spring 2024
-# Author: Ludovic Mermod, Jean-Cédric Chappelier & Édouard Bugnion
-# Date: Mars 2024
-
-# main targets
-
-# 	style: astyle formatting
-# 	doc: create documentation
-#       feedback: execute tests within a container from source repo
-#       check: local tests
-
-# Note: builds with address sanitizer by default
-
-TEST_DIR = ../provided/tests
-
-## You can change the tag to run week07, week08, etc.
-IMAGE := chappeli/cs202-feedback:latest
-
-#########################################################################
-# DO NOT EDIT BELOW THIS LINE
-#
-
 # ======================================================================
-# Compiler and Link
+# Useful for feedback
 
 CC = clang
+
+TARGETS := imgfsstruct imgfstools imgfslist
+
 CFLAGS += -g
-CFLAGS += -pedantic -Wall
-CFLAGS += -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wbad-function-cast -Wwrite-strings \
--Wconversion -Wunreachable-code -Wcast-qual -W -Wformat=2 -Winit-self -Wuninitialized
 
-CFLAGS += -Wcast-align
-
-## may require: export ASAN_OPTIONS=allocator_may_return_null=1
-#               export ASAN_OPTIONS=verify_asan_link_order=0
-# different -fsanitize options are available, including -fmemory
 CPPFLAGS += -fsanitize=address
 LDFLAGS  += -fsanitize=address
 LDLIBS   += -fsanitize=address
 
-CFLAGS   += -DWEEK=12
+CFLAGS	 += $(shell pkg-config --cflags vips)
+LDLIBS	 += $(shell pkg-config --libs vips)
 
-ifdef DEBUG
-# add the debug flag, may need to comment this line when doing make feedback
-#TODO : Make feedback should build with -UDEBUG
-CPPFLAGS += -DDEBUG
-endif
+EXECS=$(foreach name,$(TARGETS),unit-test-$(name))
 
-.PHONY: all all-deferred
+.PHONY: unit-tests all $(TARGETS) execs
 
-EXCLUDE_SRCS = imgfscmd.c tcp-test-client.c tcp-test-server.c http-test-server.c imgfs_server.c
-SRCS = $(filter-out $(EXCLUDE_SRCS), $(wildcard *.c))
+# first creates all exec, **then** launch them
+all: execs unit-tests
 
-LDLIBS += -lm -lssl -lcrypto
+unit-tests: $(TARGETS)
 
-OBJS=$(subst .c,.o,$(SRCS))
+execs: $(EXECS)
 
-all:: all-deferred
+# some target shortcuts : compile & run the tests
+imgfsstruct: unit-test-imgfsstruct
+	./$^
 
+# some target shortcuts : compile & run the tests
+imgfstools: unit-test-imgfstools
+	./$^
 
-imgfscmd: $(OBJS) imgfscmd.o
+# some target shortcuts : compile & run the tests
+imgfslist: unit-test-imgfslist
+	./$^
 
-imgfs_server: $(OBJS) imgfs_server.o
+# some target shortcuts : compile & run the tests
+imgfscreate: unit-test-imgfscreate
+	./$^
 
-tcp: tcp-test-client tcp-test-server
-tcp-test-client: util.o tcp-test-client.o socket_layer.o
-tcp-test-server: util.o tcp-test-server.o socket_layer.o
+# some target shortcuts : compile & run the tests
+imgfsdelete: unit-test-imgfsdelete
+	./$^
 
-http-test-server: http-test-server.o http_net.o http_prot.o socket_layer.o error.o util.o
+# some target shortcuts : compile & run the tests
+imgfsdedup: unit-test-imgfsdedup
+	./$^
 
-# Computes the valid targets for `all`
-TARGETS = imgfscmd
+# some target shortcuts : compile & run the tests
+imgfscontent: unit-test-imgfscontent
+	./$^
 
-ifneq (,$(wildcard ./imgfs_server.c))
-TARGETS += imgfs_server
-endif
+# some target shortcuts : compile & run the tests
+imgfsinsert: unit-test-imgfsinsert
+	./$^
 
-ifneq (,$(wildcard ./tcp-test-*.c))
-TARGETS += tcp tcp-test-client tcp-test-server
-endif
+# some target shortcuts : compile & run the tests
+imgfsread: unit-test-imgfsread
+	./$^
 
-ifneq (,$(wildcard ./http-test-server.c))
-TARGETS += http-test-server
-endif
+# some target shortcuts : compile & run the tests
+http: unit-test-http
+	./$^
 
-all-deferred:: $(TARGETS)
+# ======================================================================
+DATA_DIR ?= ../data/
+SRC_DIR  ?= ../../done
+CFLAGS  += '-I$(SRC_DIR)' -DCS212_TEST -DDATA_DIR='"$(DATA_DIR)"'
+LDFLAGS += '-L$(SRC_DIR)'
 
+LDLIBS += -lcheck -lm -lrt -pthread -lsubunit -lcrypto
 
-.PHONY: depend clean new static-check check release doc
+OBJS = $(SRC_DIR)/imgfs_tools.o $(SRC_DIR)/imgfscmd_functions.o $(SRC_DIR)/util.o $(SRC_DIR)/imgfs_list.o 
 
-# automatically generate the dependencies
-# including .h dependencies !
+# ======================================================================
+unit-test-imgfsstruct.o: unit-test-imgfsstruct.c $(SRC_DIR)/imgfs.h
 
-depend: .depend
+# ======================================================================
+unit-test-imgfstools.o: unit-test-imgfstools.c $(SRC_DIR)/imgfs.h
+unit-test-imgfstools: unit-test-imgfstools.o $(SRC_DIR)/imgfs_tools.o
 
-.depend: $(SRCS)
-	bash -c "cat $(foreach SRC,$(SRCS),<($(CC) $(CFLAGS) -MM -MT $(SRC:.c=.o) $(SRC))) > ./.depend"
+# ======================================================================
+unit-test-imgfslist.o: unit-test-imgfslist.c $(SRC_DIR)/imgfs.h
+unit-test-imgfslist: unit-test-imgfslist.o $(OBJS)
 
-ifneq ($(MAKECMDGOALS),clean)
--include .depend
-endif
+# ======================================================================
+unit-test-imgfscreate.o: unit-test-imgfscreate.c $(SRC_DIR)/imgfs.h
+unit-test-imgfscreate: unit-test-imgfscreate.o $(OBJS)
+
+# ======================================================================
+unit-test-imgfsdelete.o: unit-test-imgfsdelete.c $(SRC_DIR)/imgfs.h
+unit-test-imgfsdelete: unit-test-imgfsdelete.o $(OBJS)
+
+# ======================================================================
+unit-test-imgfsdedup.o: unit-test-imgfsdedup.c $(SRC_DIR)/imgfs.h
+unit-test-imgfsdedup: unit-test-imgfsdedup.o $(OBJS)
+
+# ======================================================================
+unit-test-imgfscontent.o: unit-test-imgfscontent.c $(SRC_DIR)/imgfs.h
+unit-test-imgfscontent: unit-test-imgfscontent.o $(OBJS)
+
+# ======================================================================
+unit-test-imgfsinsert.o: unit-test-imgfsinsert.c $(SRC_DIR)/imgfs.h
+unit-test-imgfsinsert: unit-test-imgfsinsert.o $(OBJS)
+
+# ======================================================================
+unit-test-imgfsread.o: unit-test-imgfsread.c $(SRC_DIR)/imgfs.h
+unit-test-imgfsread: unit-test-imgfsread.o $(OBJS)
+
+# ======================================================================
+unit-test-http.o: unit-test-http.c $(SRC_DIR)/imgfs.h
+unit-test-http: unit-test-http.o $(OBJS)
+
+# ======================================================================
+.PHONY: clean dist-clean reset
 
 clean::
-	-@/bin/rm -f *.o *~  .depend $(TARGETS)
-	$(MAKE) -C $(TEST_DIR)/unit dist-clean
+	-$(RM) *.o *~
 
-new: clean all
+dump-clean:
+	-$(RM) $(DATA_DIR)/dump*
 
-static-check:
-	CCC_CC=$(CC) scan-build -analyze-headers --status-bugs -maxloop 64 make -j1 new
-
-style:
-	astyle -n -o -A8 -xt0 *.[ch]
-
-unit-tests:
-	$(MAKE) SRC_DIR=$${PWD} -B -C $(TEST_DIR)/unit
-
-test-%:
-	$(MAKE) SRC_DIR=$${PWD} -B -C $(TEST_DIR)/unit $*
-
-$(TEST_DIR)/unit/%:
-	$(MAKE) SRC_DIR=$${PWD} -B -C $(TEST_DIR)/unit unit-test-$*
+dist-clean: clean
+	-$(RM) $(foreach T,$(TARGETS),unit-test-$(T))
 
 
-
-dbg: $(TEST_DIR)/unit/$(EXE)
-ifndef TEST
-	$(error Missing test name)
-endif
-ifndef EXE
-	$(error Missing executable name)
-endif
-	gdb -ex 'set debuginfod enabled off' \
-		-ex 'cd ../provided/tests/unit/' \
-		-ex 'set environment CK_FORK=no' \
-		-ex 'break $(TEST)_fn' -ex 'run' \
-		-ex 'n' '$(PWD)/../provided/tests/unit/unit-test-$(EXE)'
-
-define e2e_test
-robot -v srcdir:$(PWD) -v datadir:$(TEST_DIR)/data $(TEST_DIR)/end-to-end/$1 ;
-endef
-end2end-tests: $(TARGETS)
-	$(call e2e_test,week07.robot)
-
-check: end2end-tests unit-tests
-
-## --------------------------------------------------
-# target to do all checks before releasing a new version by staff
-release: new check style static-check clean
-
-## --------------------------------------------------
-# target to make documentation
-doc: Doxyfile
-	doxygen Doxyfile
-
-## ======================================================================
-## Feedback
-
-REPO := $(shell git config --get remote.origin.url)
-SSH_DIR := $(HOME)/.ssh
-DOCKER_OPTIONS += -e REPO=$(REPO) -v $(SSH_DIR):/opt/.ssh $(IMAGE)
-
-.PHONY: feedback feedback-pull feedback-debug feedback-VM-CO feedback-debug-VM-CO clone-ssh clean-fake-ssh
-
-feedback-pull:
-	@echo Will use $(REPO) inside container
-	@docker pull $(IMAGE)
-feedback: feedback-pull
-	@docker run -it --rm $(DOCKER_OPTIONS)
-feedback-debug: feedback-pull
-	@docker run -it --rm --entrypoint=./debugmode.sh $(DOCKER_OPTIONS)
-
-clone-ssh:
-	@-$(eval SSH_DIR := $(HOME)/.$(shell date "+%s;$$"|sha256sum|cut -c-32))
-	@cp -r $(HOME)/.ssh/. $(SSH_DIR)
-
-clean-fake-ssh:
-	@case $(SSH_DIR) in $(HOME)/\.????????????????????????????????) $(RM) -fr $(SSH_DIR) ;; *) echo "Dare not remove \"$(SSH_DIR)\"" ;; esac
-
-feedback-VM-CO: clone-ssh feedback clean-fake-ssh
-
-feedback-debug-VM-CO: clone-ssh feedback-debug clean-fake-ssh
-
-## ======================================================================
-## Submit
-
-SUBMIT_SCRIPT=../provided/submit.sh
-
-.PHONY: submit1 submit2 submit
-
-submit1: $(SUBMIT_SCRIPT)
-	@$(SUBMIT_SCRIPT) 1
-
-submit2: $(SUBMIT_SCRIPT)
-	@$(SUBMIT_SCRIPT) 2
-
-submit3: $(SUBMIT_SCRIPT)
-	@$(SUBMIT_SCRIPT) 3
-
-submit:
-	@printf 'what "make submit"??\nIt'\''s either "make submit1", "make submit2" or "make submit3"...\n'
+reset: dist-clean all

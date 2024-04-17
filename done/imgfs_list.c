@@ -1,11 +1,6 @@
 #include "imgfs.h"
 #include "util.h"
-
-#include <inttypes.h>      // for PRIxN macros
-#include <openssl/sha.h>   // for SHA256_DIGEST_LENGTH
-#include <stdint.h>        // for uint8_t
 #include <stdio.h>         // for sprintf
-#include <stdlib.h>        // for calloc
 #include <string.h>        // for strcmp
 
 /**

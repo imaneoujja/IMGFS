@@ -9,9 +9,12 @@
 #include "imgfscmd_functions.h"
 #include "util.h"   // for _unused
 
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
+
+#include "string.h"
+
+#define MAX_FILES_OPTION "-max_files"
+#define THUMB_RES_OPTION "-thumb_res"
+#define SMALL_RES_OPTION "-small_res"
 
 // default values
 static const uint32_t default_max_files = 128;
@@ -67,15 +70,51 @@ int do_list_cmd(int argc, char** argv)
 ********************************************************************** */
 int do_create_cmd(int argc, char** argv)
 {
-
+    M_REQUIRE_NON_NULL(argv);
+    M_REQUIRE_NON_NULL(argv[1]);
     puts("Create");
-    /* **********************************************************************
-     * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
-     * **********************************************************************
-     */
+    if (argc < 2) {
+        return ERR_NOT_ENOUGH_ARGUMENTS;
+    }
+    struct imgfs_file file;
+    int resized_res_i = 0;
+    int max_size;
+    for (int i = 2; i < argc; ++i) {
+        if (strcmp(argv[i], MAX_FILES_OPTION) == 0) {
+            if (i + 1 >= argc) {
+                return ERR_NOT_ENOUGH_ARGUMENTS;
+            }
 
-    TO_BE_IMPLEMENTED();
-    return NOT_IMPLEMENTED;
+            file.header.max_files = atouint32(argv[i + 1]);
+
+            if (file.header.max_files == 0 || file.header.max_files > default_max_files) {
+                return ERR_MAX_FILES;
+            }
+
+            i++;
+        } else if (strcmp(argv[i], THUMB_RES_OPTION) == 0 || strcmp(argv[i], SMALL_RES_OPTION) == 0) {
+            if (i + 2 >= argc) {
+                return ERR_NOT_ENOUGH_ARGUMENTS;
+            }
+            file.header.resized_res[resized_res_i] = atouint16(argv[i + 1]);
+            file.header.resized_res[resized_res_i + 1] = atouint16(argv[i + 2]);
+            if (strcmp(argv[i], THUMB_RES_OPTION) == 0) {
+                max_size = MAX_THUMB_RES;
+            }
+            else{
+                max_size = MAX_SMALL_RES;
+            }
+            if (file.header.resized_res[resized_res_i]  == 0 || file.header.resized_res[resized_res_i+1] == 0 || file.header.resized_res[resized_res_i] > max_size || file.header.resized_res[resized_res_i+1] > max_size) {
+                return ERR_RESOLUTIONS;
+            }
+            resized_res_i += 2;
+            i += 2;
+        } else {
+            return ERR_INVALID_ARGUMENT;
+        }
+    }
+    int err = do_create(argv[1],&file);
+    return err;
 }
 
 /**********************************************************************
