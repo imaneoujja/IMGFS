@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 
         int foundCommand=0;
         argc -- ; argv++;
-        for (int i = 0; i < NUM_COMMANDS; i++) {
+        for (size_t i = 0; i < NUM_COMMANDS; i++) {
             if (strcmp(argv[0], commands[i].name) == 0) {
                 ret = commands[i].function(argc, argv);
                 printf(ret);

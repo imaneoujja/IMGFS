@@ -95,7 +95,7 @@ int do_open(const char* imgfs_filename,
         return ERR_IO;
     }
 
-    int num_files = imgfs_file->header.nb_files;
+    int num_files = imgfs_file->header.max_files;
     imgfs_file->metadata = calloc(num_files,sizeof(struct img_metadata));
     if (imgfs_file->metadata == NULL){
         return ERR_OUT_OF_MEMORY;

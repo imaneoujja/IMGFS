@@ -71,15 +71,16 @@ int do_list_cmd(int argc, char** argv)
 int do_create_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
+    if (argc < 2) {
+        return ERR_NONE;
+    }
     M_REQUIRE_NON_NULL(argv[1]);
     puts("Create");
-    if (argc < 2) {
-        return ERR_NOT_ENOUGH_ARGUMENTS;
-    }
+
     struct imgfs_file file;
     int resized_res_i = 0;
     int max_size;
-    for (int i = 2; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], MAX_FILES_OPTION) == 0) {
             if (i + 1 >= argc) {
                 return ERR_NOT_ENOUGH_ARGUMENTS;

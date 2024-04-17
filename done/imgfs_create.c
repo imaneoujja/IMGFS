@@ -10,10 +10,9 @@
  * @param imgfs_file In memory structure with header and metadata.
  */
 int do_create(const char* imgfs_filename, struct imgfs_file* imgfs_file){
+    M_REQUIRE_NON_NULL(imgfs_filename);
+    M_REQUIRE_NON_NULL(imgfs_file);
     FILE *filePointer;
-    if (imgfs_file == NULL) {
-        return ERR_INVALID_ARGUMENT; // Return an error code
-    }
     strncpy(imgfs_file->header.name, CAT_TXT, sizeof(imgfs_file->header.name) - 1);
     imgfs_file->header.name[sizeof(imgfs_file->header.name) - 1] = '\0';
 
