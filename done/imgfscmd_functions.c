@@ -53,25 +53,28 @@ int help(int useless _unused, char** useless_too _unused)
  ********************************************************************** */
 int do_list_cmd(int argc, char** argv)
 {
-
-    M_REQUIRE_NON_NULL(argv);
-    M_REQUIRE_NON_NULL(argv[0]);
-    if (argc !=1 ){
-        return ERR_INVALID_COMMAND;
-    }
-    struct imgfs_file file;
-    file.file = NULL;
-    file.metadata = NULL;
-    int err = do_open(argv[0],
-                      "rb",
-                      &file);
-    if (err == ERR_NONE){
-        enum do_list_mode output_mode = STDOUT;
-        err = do_list(&file,output_mode, NULL);
+    if (argc != 2) {
+        return ERR_INVALID_ARGUMENT;
     }
 
-    do_close(&file);
-    return err;
+    char* filename = argv[1];
+
+    struct imgfs_file img_file;
+    int err_code = do_open(filename, "rb", &img_file);
+    if (err_code != ERR_NONE) {
+        return err_code;
+    }
+
+    err_code = do_list(&img_file, STDOUT, NULL);
+    if (err_code != ERR_NONE) {
+        return err_code;
+    }
+
+
+    do_close(&img_file);
+
+    return ERR_NONE;
+
 }
 
 /**********************************************************************

@@ -77,37 +77,39 @@ ORIGINAL: %" PRIu32 " x %" PRIu32 "\n",
 int do_open(const char* imgfs_filename,
             const char* open_mode,
             struct imgfs_file* imgfs_file){
-    M_REQUIRE_NON_NULL(imgfs_filename);
+                    M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(open_mode);
+    M_REQUIRE_NON_NULL(imgfs_file);
 
-    FILE *filePointer;
-    if (imgfs_file == NULL) {
-        return ERR_INVALID_ARGUMENT; // Return an error code
-    }
-    filePointer = fopen(imgfs_filename, open_mode);
-    if (filePointer== NULL) {
-        return ERR_IO; // Return an error code
-    }
-
-    imgfs_file->file= filePointer;
-    size_t bytes_read = fread(&imgfs_file->header, sizeof(struct imgfs_header),  1,filePointer);
-    if (bytes_read != 1){
+    
+    imgfs_file->file=fopen(imgfs_filename,open_mode);
+    if (imgfs_file->file ==NULL)
+    {
         return ERR_IO;
     }
-
-
-
-    int num_files = imgfs_file->header.max_files;
-    imgfs_file->metadata = calloc(num_files,sizeof(struct img_metadata));
-    if (imgfs_file->metadata == NULL){
+    
+  
+    if (fread(&(imgfs_file->header), sizeof(struct imgfs_header), 1, imgfs_file->file) != 1) {
+        fclose(imgfs_file->file);
+        return ERR_IO;
+    }
+    
+    imgfs_file->metadata = calloc(imgfs_file->header.nb_files, sizeof(struct img_metadata));
+    if (imgfs_file->metadata == NULL) {
+        fclose(imgfs_file->file);
         return ERR_OUT_OF_MEMORY;
     }
-    bytes_read = fread(imgfs_file->metadata, sizeof(struct img_metadata),num_files,filePointer);
-    if (bytes_read != num_files){
-        return ERR_IO;
-    }
+    size_t total_metadata_items = imgfs_file->header.nb_files * sizeof(struct img_metadata);
 
+
+    size_t read = fread(imgfs_file->metadata, 1, total_metadata_items, imgfs_file->file);
+    if (read != total_metadata_items) {
+       free(imgfs_file->metadata);
+       return ERR_IO;
+    }
+   
     return ERR_NONE;
+
 }
 
 /**

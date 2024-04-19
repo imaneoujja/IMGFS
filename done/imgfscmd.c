@@ -56,11 +56,12 @@ int main(int argc, char* argv[])
             //help(argc,argv);
             ret = ERR_INVALID_COMMAND;
         }
+        
     }
     if (ret) {
         fprintf(stderr, "ERROR: %s\n", ERR_MSG(ret));
-        help(argc, argv);
+        //help(argc, argv);
     }
-
+    
     return ret;
 }
