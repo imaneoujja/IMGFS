@@ -40,30 +40,27 @@ int main(int argc, char* argv[])
     if (argc < 2) {
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
     } else {
-
         int foundCommand=0;
+        int i =0;
         argc -- ; argv++;
-        for (size_t i = 0; i < NUM_COMMANDS; i++) {
-            if (strcmp(argv[0], commands[i].name) == 0) {
+        while(commands[i].name != NULL){
+            if (strcmp(argv[0], commands[i].name)==0){
                 ret = commands[i].function(argc, argv);
-                printf(ret);
                 foundCommand=1;
+                break;
             }
+            i++;
         }
 
         if (!foundCommand) {
-            help(argc,argv);
+            //help(argc,argv);
             ret = ERR_INVALID_COMMAND;
         }
-
-        
     }
-
     if (ret) {
         fprintf(stderr, "ERROR: %s\n", ERR_MSG(ret));
         help(argc, argv);
     }
-    
 
     return ret;
 }

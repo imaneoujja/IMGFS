@@ -30,13 +30,22 @@ static const uint16_t MAX_SMALL_RES = 512;
  ********************************************************************** */
 int help(int useless _unused, char** useless_too _unused)
 {
-    /* **********************************************************************
-     * TODO WEEK 08: WRITE YOUR CODE HERE.
-     * **********************************************************************
-     */
-
-    TO_BE_IMPLEMENTED();
-    return NOT_IMPLEMENTED;
+    printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
+    printf("  help: displays this help.\n");
+    printf("  list <imgFS_filename>: list imgFS content.\n");
+    printf("  create <imgFS_filename> [options]: create a new imgFS.\n");
+    printf("      options are:\n");
+    printf("          -max_files <MAX_FILES>: maximum number of files.\n");
+    printf("                                  default value is 128\n");
+    printf("                                  maximum value is 4294967295\n");
+    printf("          -thumb_res <X_RES> <Y_RES>: resolution for thumbnail images.\n");
+    printf("                                  default value is 64x64\n");
+    printf("                                  maximum value is 128x128\n");
+    printf("          -small_res <X_RES> <Y_RES>: resolution for small images.\n");
+    printf("                                  default value is 256x256\n");
+    printf("                                  maximum value is 512x512\n");
+    printf("  delete <imgFS_filename> <imgID>: delete image imgID from imgFS.\n");
+    return ERR_NONE;
 }
 
 /**********************************************************************
@@ -125,11 +134,26 @@ int do_create_cmd(int argc, char** argv)
  */
 int do_delete_cmd(int argc, char** argv)
 {
-    /* **********************************************************************
-     * TODO WEEK 08: WRITE YOUR CODE HERE (and change the return if needed).
-     * **********************************************************************
-     */
+    if (argc != 3) {
+        return ERR_INVALID_ARGUMENT;
+    }
 
-    TO_BE_IMPLEMENTED();
-    return NOT_IMPLEMENTED;
+    const char* imgfs_filename = argv[1];
+    const char* img_id = argv[2];
+
+    struct imgfs_file imgfs_file;
+    int ret = do_open(imgfs_filename, "rb+", &imgfs_file);
+    if (ret != ERR_NONE) {
+        return ret;
+    }
+
+    ret = do_delete(img_id, &imgfs_file);
+    if (ret != ERR_NONE) {
+        do_close(&imgfs_file);
+        return ret;
+    }
+
+    do_close(&imgfs_file);
+
+    return ERR_NONE;
 }
