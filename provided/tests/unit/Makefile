@@ -3,7 +3,9 @@
 
 CC = clang
 
-TARGETS := imgfsstruct imgfstools imgfslist imgfscreate
+TARGETS := imgfsstruct imgfstools imgfslist
+TARGETS += imgfscreate imgfsdelete
+TARGETS += imgfsdedup imgfscontent
 
 CFLAGS += -g
 
@@ -63,14 +65,11 @@ imgfscontent: unit-test-imgfscontent
 	@printf '\n'
 
 # some target shortcuts : compile & run the tests
-<<<<<<< HEAD
-=======
 imgfsresolutions: unit-test-imgfsresolutions
 	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
 	@printf '\n'
 
 # some target shortcuts : compile & run the tests
->>>>>>> 12265e1 (improving tests (week09))
 imgfsinsert: unit-test-imgfsinsert
 	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
 	@printf '\n'
@@ -98,6 +97,8 @@ OBJS += $(SRC_DIR)/util.o $(SRC_DIR)/error.o
 
 OBJS += $(SRC_DIR)/imgfs_create.o $(SRC_DIR)/imgfs_delete.o
 
+OBJS += $(SRC_DIR)/image_dedup.o $(SRC_DIR)/image_content.o
+
 # ======================================================================
 unit-test-imgfsstruct.o: unit-test-imgfsstruct.c $(SRC_DIR)/imgfs.h
 
@@ -124,6 +125,10 @@ unit-test-imgfsdedup: unit-test-imgfsdedup.o $(OBJS)
 # ======================================================================
 unit-test-imgfscontent.o: unit-test-imgfscontent.c $(SRC_DIR)/imgfs.h
 unit-test-imgfscontent: unit-test-imgfscontent.o $(OBJS)
+
+# ======================================================================
+unit-test-imgfsresolutions.o: unit-test-imgfsresolutions.c $(SRC_DIR)/imgfs.h
+unit-test-imgfsresolutions: unit-test-imgfsresolutions.o $(OBJS)
 
 # ======================================================================
 unit-test-imgfsinsert.o: unit-test-imgfsinsert.c $(SRC_DIR)/imgfs.h
