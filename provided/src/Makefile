@@ -11,8 +11,7 @@
 
 # Note: builds with address sanitizer by default
 
-#TEST_DIR = $(PWD)/../provided/tests
-TEST_DIR = ../tests
+TEST_DIR = $(PWD)/../provided/tests
 
 ## You can change the tag to run week07, week08, etc.
 IMAGE := chappeli/cs202-feedback:latest
@@ -143,6 +142,7 @@ robot -v srcdir:$(PWD) -v datadir:$(TEST_DIR)/data $(TEST_DIR)/end-to-end/$1 ;
 endef
 end2end-tests: $(TARGETS)
 	$(call e2e_test,week07.robot)
+	$(call e2e_test,week08.robot)
 
 check: end2end-tests unit-tests
 
