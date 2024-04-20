@@ -1,3 +1,5 @@
+#pragma once
+
 /**
  * @file error.h
  * @brief error codes

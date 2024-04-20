@@ -3,9 +3,7 @@
 
 CC = clang
 
-TARGETS := imgfsstruct imgfstools imgfslist
-TARGETS += imgfscreate imgfsdelete
-TARGETS += imgfsdedup imgfscontent
+TARGETS := imgfsstruct imgfstools imgfslist imgfscreate
 
 CFLAGS += -g
 
@@ -20,10 +18,8 @@ EXECS=$(foreach name,$(TARGETS),unit-test-$(name))
 
 .PHONY: unit-tests all $(TARGETS) execs
 
-## removed undesired feature
-## # first creates all exec, **then** launch them
-## all: execs unit-tests
-all: unit-tests
+# first creates all exec, **then** launch them
+all: execs unit-tests
 
 unit-tests: $(TARGETS)
 
@@ -31,58 +27,43 @@ execs: $(EXECS)
 
 # some target shortcuts : compile & run the tests
 imgfsstruct: unit-test-imgfsstruct
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 imgfstools: unit-test-imgfstools
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 imgfslist: unit-test-imgfslist
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 imgfscreate: unit-test-imgfscreate
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 imgfsdelete: unit-test-imgfsdelete
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 imgfsdedup: unit-test-imgfsdedup
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 imgfscontent: unit-test-imgfscontent
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
-
-# some target shortcuts : compile & run the tests
-imgfsresolutions: unit-test-imgfsresolutions
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 imgfsinsert: unit-test-imgfsinsert
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 imgfsread: unit-test-imgfsread
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # some target shortcuts : compile & run the tests
 http: unit-test-http
-	./$^ && echo "==== " $< " SUCCEEDED =====" || { echo "==== " $< " FAILED ====="; false; }
-	@printf '\n'
+	./$^
 
 # ======================================================================
 DATA_DIR ?= ../data/
@@ -96,8 +77,6 @@ OBJS = $(SRC_DIR)/imgfs_list.o $(SRC_DIR)/imgfs_tools.o $(SRC_DIR)/imgfscmd_func
 OBJS += $(SRC_DIR)/util.o $(SRC_DIR)/error.o
 
 OBJS += $(SRC_DIR)/imgfs_create.o $(SRC_DIR)/imgfs_delete.o
-
-OBJS += $(SRC_DIR)/image_dedup.o $(SRC_DIR)/image_content.o
 
 # ======================================================================
 unit-test-imgfsstruct.o: unit-test-imgfsstruct.c $(SRC_DIR)/imgfs.h
@@ -125,10 +104,6 @@ unit-test-imgfsdedup: unit-test-imgfsdedup.o $(OBJS)
 # ======================================================================
 unit-test-imgfscontent.o: unit-test-imgfscontent.c $(SRC_DIR)/imgfs.h
 unit-test-imgfscontent: unit-test-imgfscontent.o $(OBJS)
-
-# ======================================================================
-unit-test-imgfsresolutions.o: unit-test-imgfsresolutions.c $(SRC_DIR)/imgfs.h
-unit-test-imgfsresolutions: unit-test-imgfsresolutions.o $(OBJS)
 
 # ======================================================================
 unit-test-imgfsinsert.o: unit-test-imgfsinsert.c $(SRC_DIR)/imgfs.h
