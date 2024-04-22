@@ -17,21 +17,27 @@ int do_list(const struct imgfs_file *imgfs_file,
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
-    if (output_mode == STDOUT) {
-        print_header(&imgfs_file->header);
-        if (imgfs_file->header.nb_files == 0) {
-            printf("<< empty imgFS >>\n");
-        } else {
-            for (int i = 0; i < imgfs_file->header.nb_files; i++) {
-                if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
-                    print_metadata(&(imgfs_file->metadata[i]));
-                }
-            }
 
+    if (output_mode == STDOUT) {
+        print_header(&(imgfs_file->header));
+        int valid_images = 0;
+
+        for (int i = 0; i < (int)(imgfs_file->header.max_files); i++) {
+            if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
+                print_metadata(&(imgfs_file->metadata[i]));
+                valid_images++;
+            } 
         }
-    } else {
+
+        if (valid_images == 0) {
+            printf("<< empty imgFS >>\n");
+        }
+    } else if (output_mode == JSON) {
         M_REQUIRE_NON_NULL(json);
         TO_BE_IMPLEMENTED();
+    } else {
+        printf("Invalid output mode\n");
     }
+
     return ERR_NONE;
 }

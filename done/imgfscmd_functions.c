@@ -53,25 +53,34 @@ int help(int useless _unused, char** useless_too _unused)
  ********************************************************************** */
 int do_list_cmd(int argc, char** argv)
 {
+    M_REQUIRE_NON_NULL(argv);
     if (argc != 2) {
+        fprintf(stderr, "Usage: %s <imgFS_file>\n", argv[0]);
         return ERR_INVALID_ARGUMENT;
     }
 
-    char* filename = argv[1];
-
-    struct imgfs_file img_file;
-    int err_code = do_open(filename, "rb", &img_file);
-    if (err_code != ERR_NONE) {
-        return err_code;
+    const char* imgfs_filename = argv[1];
+    struct imgfs_file imgfs_file;
+    int err = do_open(imgfs_filename, "rb", &imgfs_file);
+    if (err != ERR_NONE) {
+        fprintf(stderr, "Error opening imgFS file: %d\n", err);
+        return err;
     }
 
-    err_code = do_list(&img_file, STDOUT, NULL);
-    if (err_code != ERR_NONE) {
-        return err_code;
+    enum do_list_mode output_mode = STDOUT;
+    char** json = NULL;
+    
+    int error=do_list(&imgfs_file, output_mode, json);   
+    if(error!=ERR_NONE){
+        fprintf(stderr,"Error while listing the imgFS fils \n");
+        do_close(&imgfs_file);
+        return error;
+
     }
+    
+    do_close(&imgfs_file);
 
 
-    do_close(&img_file);
 
     return ERR_NONE;
 
