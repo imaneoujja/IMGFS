@@ -36,7 +36,6 @@ struct command_mapping commands[] = {
 int main(int argc, char* argv[])
 {
     int ret = 0;
-
     if (argc < 2) {
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
     } else {

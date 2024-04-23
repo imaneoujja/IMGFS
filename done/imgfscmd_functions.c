@@ -54,33 +54,26 @@ int help(int useless _unused, char** useless_too _unused)
 int do_list_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
+    
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <imgFS_file>\n", argv[0]);
-        return ERR_INVALID_ARGUMENT;
+        if (argc ==1){
+            return ERR_IO;}
+        return ERR_INVALID_COMMAND;
     }
-
     const char* imgfs_filename = argv[1];
     struct imgfs_file imgfs_file;
     int err = do_open(imgfs_filename, "rb", &imgfs_file);
     if (err != ERR_NONE) {
-        fprintf(stderr, "Error opening imgFS file: %d\n", err);
         return err;
     }
-
     enum do_list_mode output_mode = STDOUT;
     char** json = NULL;
-    
     int error=do_list(&imgfs_file, output_mode, json);   
     if(error!=ERR_NONE){
-        fprintf(stderr,"Error while listing the imgFS fils \n");
         do_close(&imgfs_file);
         return error;
-
     }
-    
     do_close(&imgfs_file);
-
-
 
     return ERR_NONE;
 
@@ -92,6 +85,9 @@ int do_list_cmd(int argc, char** argv)
 int do_create_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
+    if (argc ==0){
+        return ERR_NOT_ENOUGH_ARGUMENTS;
+    }
 
     struct imgfs_file file;
     int resized_res_i = 0;
@@ -153,6 +149,10 @@ int do_delete_cmd(int argc, char** argv)
     const char* imgfs_filename = argv[1];
     const char* img_id = argv[2];
 
+    if (img_id == NULL || strlen(img_id) == 0 || strlen(img_id) > MAX_IMG_ID) {
+        return ERR_INVALID_IMGID;
+    }
+
     struct imgfs_file imgfs_file;
     int ret = do_open(imgfs_filename, "rb+", &imgfs_file);
     if (ret != ERR_NONE) {
@@ -169,3 +169,4 @@ int do_delete_cmd(int argc, char** argv)
 
     return ERR_NONE;
 }
+

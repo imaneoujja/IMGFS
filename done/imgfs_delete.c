@@ -5,29 +5,28 @@
 
 int do_delete(const char* img_id, struct imgfs_file* imgfs_file) {
     M_REQUIRE_NON_NULL(img_id);
-    if (strlen(img_id)==0 ||  strlen(img_id) > MAX_IMG_ID) {
-        return ERR_INVALID_IMGID;
+    M_REQUIRE_NON_NULL(imgfs_file);
+
+    if (imgfs_file->file == NULL) {
+        return ERR_IO; 
     }
 
-    int index = -1;
     for (int i = 0; i < imgfs_file->header.max_files; ++i) {
         if (strcmp(imgfs_file->metadata[i].img_id, img_id) == 0) {
-            index = i;
-            break;
+            imgfs_file->metadata[i].is_valid = EMPTY;
+            imgfs_file->header.version++; 
+            imgfs_file->header.nb_files--; 
+
+        
+            fseek(imgfs_file->file, 0, SEEK_SET); 
+            fwrite(&imgfs_file->header, sizeof(struct imgfs_header), 1, imgfs_file->file); 
+            fwrite(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file); 
+            fflush(imgfs_file->file); 
+
+            return ERR_NONE; 
         }
     }
 
-    if (index == -1) {
-        return ERR_IMAGE_NOT_FOUND;
-    }
+    return ERR_IMAGE_NOT_FOUND;
 
-    imgfs_file->metadata[index].is_valid = EMPTY;
-    imgfs_file->header.version++;
-    imgfs_file->header.nb_files--;
-
-    fseek(imgfs_file->file, 0, SEEK_SET);
-    fwrite(&imgfs_file->header, sizeof(struct imgfs_header), 1, imgfs_file->file);
-
-
-    return ERR_NONE;
 }

@@ -88,20 +88,15 @@ int do_open(const char* imgfs_filename,
         return ERR_IO;
     }
     
-    
-
-    //read header
     if (fread(&(imgfs_file->header), sizeof(struct imgfs_header), 1, imgfs_file->file) != 1) {
         fclose(imgfs_file->file);
         return ERR_IO;
     }
-    
     imgfs_file->metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
     if (imgfs_file->metadata == NULL) {
         fclose(imgfs_file->file);
         return ERR_OUT_OF_MEMORY;
     }
-
 
     for (int i=0;i<(int)(imgfs_file->header.max_files);i++){
         size_t read = fread(&imgfs_file->metadata[i],sizeof(struct img_metadata), 1, imgfs_file->file);
