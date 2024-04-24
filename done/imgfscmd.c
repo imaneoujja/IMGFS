@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef int (*CommandFunction)(int argc, char* argv[]);
+typedef int (*CommandFunction)(int argc, char** argv);
 
 struct command_mapping {
     const char* name;
@@ -28,13 +28,13 @@ struct command_mapping commands[] = {
     {"delete", do_delete_cmd}
 };
 
-#define NUM_COMMANDS (sizeof(commands) / sizeof(commands[0]))
 
 /*******************************************************************************
  * MAIN
  */
-int main(int argc, char* argv[])
+int main(int argc, char** argv)
 {
+    M_REQUIRE_NON_NULL(argv);
     int ret = 0;
     if (argc < 2) {
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
         int foundCommand=0;
         int i =0;
         argc -- ; argv++;
-        while(commands[i].name != NULL){
+        while(i<4 && commands[i].name != NULL){
             if (strcmp(argv[0], commands[i].name)==0){
                 ret = commands[i].function(argc, argv);
                 foundCommand=1;

@@ -142,14 +142,16 @@ int do_create_cmd(int argc, char** argv)
  */
 int do_delete_cmd(int argc, char** argv)
 {
-    if (argc != 3) {
-        return ERR_INVALID_ARGUMENT;
+    M_REQUIRE_NON_NULL(argv);
+    if (argc < 2) {
+        return ERR_NOT_ENOUGH_ARGUMENTS;
     }
 
-    const char* imgfs_filename = argv[1];
-    const char* img_id = argv[2];
 
-    if (img_id == NULL || strlen(img_id) == 0 || strlen(img_id) > MAX_IMG_ID) {
+    const char* imgfs_filename = argv[0];
+    const char* img_id = argv[1];
+
+    if (img_id == NULL || strlen(img_id) > MAX_IMG_ID) {
         return ERR_INVALID_IMGID;
     }
 
