@@ -55,12 +55,12 @@ int do_list_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
     
-    if (argc != 2) {
-        if (argc ==1){
+    if (argc != 1) {
+        if (argc ==0){
             return ERR_IO;}
         return ERR_INVALID_COMMAND;
     }
-    const char* imgfs_filename = argv[1];
+    const char* imgfs_filename = argv[0];
     struct imgfs_file imgfs_file;
     int err = do_open(imgfs_filename, "rb", &imgfs_file);
     if (err != ERR_NONE) {

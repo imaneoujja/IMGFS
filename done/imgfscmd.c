@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef int (*CommandFunction)(int argc, char** argv);
+typedef int (*CommandFunction)(int argc, char* argv[]);
 
 struct command_mapping {
     const char* name;
@@ -32,34 +32,34 @@ struct command_mapping commands[] = {
 /*******************************************************************************
  * MAIN
  */
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
     M_REQUIRE_NON_NULL(argv);
     int ret = 0;
     if (argc < 2) {
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
     } else {
+        argc -- ; argv++;
         int foundCommand=0;
         int i =0;
-        argc -- ; argv++;
-        while(i<4 && commands[i].name != NULL){
+        for(int i = 0; i<4 ; i++){
             if (strcmp(argv[0], commands[i].name)==0){
-                ret = commands[i].function(argc, argv);
+                ret = commands[i].function(argc-1, argv+1);
                 foundCommand=1;
                 break;
             }
-            i++;
+
         }
 
         if (!foundCommand) {
-            //help(argc,argv);
+            help(argc,argv);
             ret = ERR_INVALID_COMMAND;
         }
         
     }
     if (ret) {
         fprintf(stderr, "ERROR: %s\n", ERR_MSG(ret));
-        //help(argc, argv);
+        help(argc, argv);
     }
     
     return ret;
