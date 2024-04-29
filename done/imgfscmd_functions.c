@@ -54,28 +54,25 @@ int help(int useless _unused, char** useless_too _unused)
 int do_list_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
-    
+    if (argc ==0){
+        return ERR_IO;}
     if (argc != 1) {
-        if (argc ==0){
-            return ERR_IO;}
         return ERR_INVALID_COMMAND;
     }
     const char* imgfs_filename = argv[0];
     struct imgfs_file imgfs_file;
+    // Open imgFS file, read the header and all the metadata.
     int err = do_open(imgfs_filename, "rb", &imgfs_file);
     if (err != ERR_NONE) {
         return err;
     }
+
     enum do_list_mode output_mode = STDOUT;
     char** json = NULL;
-    int error=do_list(&imgfs_file, output_mode, json);   
-    if(error!=ERR_NONE){
-        do_close(&imgfs_file);
-        return error;
-    }
+    // Display (on stdout) imgFS metadata then close the gile
+    int error=do_list(&imgfs_file, output_mode, json);
     do_close(&imgfs_file);
-
-    return ERR_NONE;
+    return error;
 
 }
 
@@ -85,6 +82,7 @@ int do_list_cmd(int argc, char** argv)
 int do_create_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
+    // Need at least imgfs_filename so argc must be greater than 0
     if (argc ==0){
         return ERR_NOT_ENOUGH_ARGUMENTS;
     }
@@ -92,46 +90,58 @@ int do_create_cmd(int argc, char** argv)
     struct imgfs_file file;
     int resized_res_i = 0;
     int max_size;
+    // Initialise all header fields to default
     file.header.max_files = default_max_files;
     file.header.resized_res[2 * THUMB_RES] = default_thumb_res;
     file.header.resized_res[2 * THUMB_RES + 1] = default_thumb_res;
     file.header.resized_res[2 * SMALL_RES] = default_small_res;
     file.header.resized_res[2 * SMALL_RES + 1] = default_small_res;
+    // While there are arguments to be read, keep (re)defining fields of the header
     for (int i = 1; i < argc; ++i) {
+        // Check whether argument matches -max_files
         if (strcmp(argv[i], MAX_FILES_OPTION) == 0) {
+            // Need at least one argument after -max_files to specify number of max files
             if (i + 1 >= argc) {
                 return ERR_NOT_ENOUGH_ARGUMENTS;
             }
 
             file.header.max_files = atouint32(argv[i + 1]);
 
-            if (file.header.max_files == 0 || file.header.max_files > default_max_files) {
+            if (file.header.max_files == 0 ) {
                 return ERR_MAX_FILES;
             }
-
+            // Advance index so it can read string specifying next field to be set
             i++;
-        } else if (strcmp(argv[i], THUMB_RES_OPTION) == 0 || strcmp(argv[i], SMALL_RES_OPTION) == 0) {
+        } // Check whether argument matches -thumb_res or -small_res
+        else if (strcmp(argv[i], THUMB_RES_OPTION) == 0 || strcmp(argv[i], SMALL_RES_OPTION) == 0) {
+            // Need at least two more arguments to specify width and height of particular resolution
             if (i + 2 >= argc) {
                 return ERR_NOT_ENOUGH_ARGUMENTS;
             }
+
             if (strcmp(argv[i], THUMB_RES_OPTION) == 0) {
-                max_size = MAX_THUMB_RES;
-                resized_res_i = THUMB_RES;
+                max_size = MAX_THUMB_RES; // Set max size for width and height in the case of the thumb resolution
+                resized_res_i = THUMB_RES; // Set index that is to be modified in the resolutions array
             }
             else{
-                max_size = MAX_SMALL_RES;
-                resized_res_i = SMALL_RES;
+                max_size = MAX_SMALL_RES; // Set max size for width and height in the case of the small resolution
+                resized_res_i = SMALL_RES; // Set index that is to be modified in the resolutions array
             }
+            // Modify width and height in resolutions array of the header
             file.header.resized_res[2*resized_res_i] = atouint16(argv[i + 1]);
             file.header.resized_res[2*resized_res_i + 1] = atouint16(argv[i + 2]);
-            if (file.header.resized_res[resized_res_i]  == 0 || file.header.resized_res[resized_res_i+1] == 0 || file.header.resized_res[resized_res_i] > max_size || file.header.resized_res[resized_res_i+1] > max_size) {
+            // Check resolution's width and height are non-negative and smaller than max size
+            if (file.header.resized_res[resized_res_i]  <= 0 || file.header.resized_res[resized_res_i+1] <= 0 || file.header.resized_res[resized_res_i] > max_size || file.header.resized_res[resized_res_i+1] > max_size) {
                 return ERR_RESOLUTIONS;
             }
+            // Advance index of next argv to be read, so it can read string specifying next field to be set
             i += 2;
         } else {
             return ERR_INVALID_ARGUMENT;
         }
     }
+    //  Creates the imgFS named as filename stored in argv[0]. Writes the header and the
+    //  preallocated empty metadata array to imgFS file.
     int err = do_create(argv[0],&file);
     do_close(&file);
     return err;

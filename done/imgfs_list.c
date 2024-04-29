@@ -19,9 +19,11 @@ int do_list(const struct imgfs_file *imgfs_file,
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
 
     if (output_mode == STDOUT) {
+        // Print contents of the header
         print_header(&(imgfs_file->header));
         int valid_images = 0;
 
+        // Print metadata of all valid images
         for (int i = 0; i < (int)(imgfs_file->header.max_files); i++) {
             if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
                 print_metadata(&(imgfs_file->metadata[i]));
@@ -29,6 +31,7 @@ int do_list(const struct imgfs_file *imgfs_file,
             } 
         }
 
+        // Or when no valid images
         if (valid_images == 0) {
             printf("<< empty imgFS >>\n");
         }
@@ -36,6 +39,7 @@ int do_list(const struct imgfs_file *imgfs_file,
         M_REQUIRE_NON_NULL(json);
         TO_BE_IMPLEMENTED();
     } else {
+        // Output mode should only be JSON or STDOUT
         printf("Invalid output mode\n");
     }
 
