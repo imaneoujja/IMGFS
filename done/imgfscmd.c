@@ -41,7 +41,6 @@ int main(int argc, char* argv[])
     } else {
         argc -- ; argv++;
         int foundCommand=0;
-        int i =0;
         for(int i = 0; i<4 ; i++){
             if (strcmp(argv[0], commands[i].name)==0){
                 ret = commands[i].function(argc-1, argv+1);

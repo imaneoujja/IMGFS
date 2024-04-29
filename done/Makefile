@@ -31,6 +31,12 @@ CFLAGS += -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wbad-function-cast -Ww
 
 CFLAGS += -Wcast-align
 
+# Add options for the compiler to include the library's headers
+CFLAGS += $(shell pkg-config vips --cflags)
+
+# Add the library to the linker
+LDLIBS += $(shell pkg-config vips --libs)
+
 ## may require: export ASAN_OPTIONS=allocator_may_return_null=1
 #               export ASAN_OPTIONS=verify_asan_link_order=0
 # different -fsanitize options are available, including -fmemory
