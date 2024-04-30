@@ -9,10 +9,9 @@
 
 #include "imgfs.h"
 #include "imgfscmd_functions.h"
-#include "util.h"   // for _unused
 
-#include <stdlib.h>
 #include <string.h>
+#include <vips/vips.h>
 
 typedef int (*CommandFunction)(int argc, char* argv[]);
 
@@ -35,6 +34,10 @@ struct command_mapping commands[] = {
 int main(int argc, char* argv[])
 {
     M_REQUIRE_NON_NULL(argv);
+    if (VIPS_INIT(argv[0])) {  // Initialize VIPS library
+        fprintf(stderr, "Failed to initialize VIPS\n");
+        return 1;
+    }
     int ret = 0;
     if (argc < 2) {
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
@@ -54,12 +57,12 @@ int main(int argc, char* argv[])
             help(argc,argv);
             ret = ERR_INVALID_COMMAND;
         }
-        
+
     }
     if (ret) {
         fprintf(stderr, "ERROR: %s\n", ERR_MSG(ret));
         help(argc, argv);
     }
-    
+    vips_shutdown();
     return ret;
 }

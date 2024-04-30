@@ -24,8 +24,10 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file) {
     }
 
     imgfs_file->metadata[found].is_valid = EMPTY;
-    
-    fseek(imgfs_file->file, sizeof(struct imgfs_header) + found * sizeof(struct img_metadata), SEEK_SET);
+
+    if (fseek(imgfs_file->file, sizeof(struct imgfs_header) + (found * sizeof(struct img_metadata)), SEEK_SET) != 0) {
+        return ERR_IO;
+    }
     if (fwrite(&imgfs_file->metadata[found], sizeof(struct img_metadata), 1, imgfs_file->file) != 1) {
         return ERR_IO;
     }
