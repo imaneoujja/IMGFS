@@ -36,7 +36,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index) {
     if (fseek(imgfs_file->file,imgfs_file->metadata[index].offset[ORIG_RES],SEEK_SET) != ERR_NONE){
         return ERR_IO;
     }
-    if (fread(buffer,sizeof(unsigned char),imgfs_file->metadata[index].size[ORIG_RES],imgfs_file->file) != imgfs_file->metadata[index].size[ORIG_RES]){
+    if (fread(buffer,imgfs_file->metadata[index].size[ORIG_RES],1,imgfs_file->file) != 1){
         return ERR_IO;
     }
     if (vips_jpegload_buffer(buffer,imgfs_file->metadata[index].size[ORIG_RES],&original_image, NULL)!=ERR_NONE){
@@ -49,15 +49,15 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index) {
     VipsImage *resized_image = NULL;
     if (resolution == THUMB_RES) {
         // Resize to thumbnail resolution
-        if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[THUMB_RES], "height",
-                                 imgfs_file->header.resized_res[THUMB_RES + 1],NULL) != ERR_NONE) {
+        if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[2*THUMB_RES], "height",
+                                 imgfs_file->header.resized_res[(2*THUMB_RES) + 1],NULL) != ERR_NONE) {
             g_object_unref(original_image);
             return ERR_IMGLIB;
         }
     } else {
         // Resize to small resolution
-        if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[SMALL_RES], "height",
-                                 imgfs_file->header.resized_res[SMALL_RES + 1],NULL)!= ERR_NONE) {
+        if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[2*SMALL_RES], "height",
+                                 imgfs_file->header.resized_res[(2*SMALL_RES) + 1],NULL)!= ERR_NONE) {
             g_object_unref(original_image);
             return ERR_IMGLIB;
         }
@@ -79,14 +79,18 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index) {
     free(buffer);
     buffer = NULL;
 
-    // Append the buffer to the imgFS file
-    if (fwrite(buffer2, sizeof(unsigned char), buffer_size, imgfs_file->file) != buffer_size) {
+    // Append the buffer to the end of imgFS file
+    if (fseek(imgfs_file->file, 0, SEEK_END) != ERR_NONE) {
         return ERR_IO;
     }
-
     // Update metadata in memory and on disk
     imgfs_file->metadata[index].size[resolution] = buffer_size;
     imgfs_file->metadata[index].offset[resolution] = ftell(imgfs_file->file);
+    if (fwrite(buffer2, buffer_size, 1, imgfs_file->file) != 1) {
+        return ERR_IO;
+    }
+
+
 
     if (fseek(imgfs_file->file, sizeof(struct imgfs_header) + (index * sizeof(struct img_metadata)), SEEK_SET) != 0) {
         return ERR_IO;
