@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     M_REQUIRE_NON_NULL(argv);
     if (VIPS_INIT(argv[0])) {  // Initialize VIPS library
         fprintf(stderr, "Failed to initialize VIPS\n");
-        return 1;
+        return ERR_IMGLIB;
     }
     int ret = 0;
     if (argc < 2) {

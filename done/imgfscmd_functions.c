@@ -88,6 +88,7 @@ int do_create_cmd(int argc, char** argv)
     }
 
     struct imgfs_file file;
+    memset(&file,0,sizeof(struct imgfs_file));
     int resized_res_i = 0;
     int max_size;
     // Initialise all header fields to default
@@ -128,8 +129,10 @@ int do_create_cmd(int argc, char** argv)
                 resized_res_i = SMALL_RES; // Set index that is to be modified in the resolutions array
             }
             // Modify width and height in resolutions array of the header
-            file.header.resized_res[2*resized_res_i] = atouint16(argv[i + 1]);
-            file.header.resized_res[2*resized_res_i + 1] = atouint16(argv[i + 2]);
+            const char * width = argv[i + 1];
+            const char * height = argv[i + 2];
+            file.header.resized_res[2*resized_res_i] = atouint16(width);
+            file.header.resized_res[2*resized_res_i + 1] = atouint16(height);
             // Check resolution's width and height are non-negative and smaller than max size
             if (file.header.resized_res[resized_res_i]  <= 0 || file.header.resized_res[resized_res_i+1] <= 0 || file.header.resized_res[resized_res_i] > max_size || file.header.resized_res[resized_res_i+1] > max_size) {
                 return ERR_RESOLUTIONS;
