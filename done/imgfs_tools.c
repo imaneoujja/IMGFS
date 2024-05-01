@@ -76,15 +76,15 @@ ORIGINAL: %" PRIu32 " x %" PRIu32 "\n",
  */
 int do_open(const char* imgfs_filename,
             const char* open_mode,
-            struct imgfs_file* imgfs_file){
+            struct imgfs_file* imgfs_file)
+{
     M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(open_mode);
     M_REQUIRE_NON_NULL(imgfs_file);
 
     // Open file in open_mode
     imgfs_file->file=fopen(imgfs_filename,open_mode);
-    if (imgfs_file->file ==NULL)
-    {
+    if (imgfs_file->file ==NULL) {
         return ERR_IO;
     }
 
@@ -100,7 +100,7 @@ int do_open(const char* imgfs_filename,
         return ERR_OUT_OF_MEMORY;
     }
     // Read each metadata entry from file and in case an error is encountered, close the file
-    for (int i=0;i<(int)(imgfs_file->header.max_files);i++){
+    for (int i=0; i<(int)(imgfs_file->header.max_files); i++) {
         size_t read = fread(&imgfs_file->metadata[i],sizeof(struct img_metadata), 1, imgfs_file->file);
         if (read != 1) {
             fclose(imgfs_file->file);
@@ -108,7 +108,7 @@ int do_open(const char* imgfs_filename,
             return ERR_IO;
         }
     }
-   
+
     return ERR_NONE;
 
 }
@@ -118,15 +118,16 @@ int do_open(const char* imgfs_filename,
  *
  * @param imgfs_file Structure for header, metadata and file pointer to be freed/closed.
  */
-void do_close(struct imgfs_file* imgfs_file){
-    if (imgfs_file!=NULL ){
+void do_close(struct imgfs_file* imgfs_file)
+{
+    if (imgfs_file!=NULL ) {
         // Close the file and make the file pointer point to NULL
-        if (imgfs_file->file !=NULL){
+        if (imgfs_file->file !=NULL) {
             fclose(imgfs_file->file);
             imgfs_file->file = NULL;
         }
         // Free space allocated for metadata and make the metadata pointer point to NULL
-        if (imgfs_file->metadata !=NULL){
+        if (imgfs_file->metadata !=NULL) {
             free(imgfs_file->metadata);
             imgfs_file->metadata= NULL;
         }

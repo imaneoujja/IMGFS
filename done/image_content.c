@@ -5,7 +5,8 @@
 #include <vips/vips.h>
 #include <stdlib.h>
 
-int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index) {
+int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
+{
     // Check the legitimacy of arguments
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
@@ -30,22 +31,22 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index) {
     // Read the original image from disk into buffer
     VipsImage *original_image;
     unsigned char *buffer = malloc(imgfs_file->metadata[index].size[ORIG_RES]);
-    if (buffer == NULL){
+    if (buffer == NULL) {
         free(buffer);
         buffer = NULL;
         return ERR_OUT_OF_MEMORY;
     }
-    if (fseek(imgfs_file->file,imgfs_file->metadata[index].offset[ORIG_RES],SEEK_SET) != ERR_NONE){
+    if (fseek(imgfs_file->file,imgfs_file->metadata[index].offset[ORIG_RES],SEEK_SET) != ERR_NONE) {
         free(buffer);
         buffer = NULL;
         return ERR_IO;
     }
-    if (fread(buffer,imgfs_file->metadata[index].size[ORIG_RES],1,imgfs_file->file) != 1){
+    if (fread(buffer,imgfs_file->metadata[index].size[ORIG_RES],1,imgfs_file->file) != 1) {
         free(buffer);
         buffer = NULL;
         return ERR_IO;
     }
-    if (vips_jpegload_buffer(buffer,imgfs_file->metadata[index].size[ORIG_RES],&original_image, NULL)!=ERR_NONE){
+    if (vips_jpegload_buffer(buffer,imgfs_file->metadata[index].size[ORIG_RES],&original_image, NULL)!=ERR_NONE) {
         free(buffer);
         buffer = NULL;
         return ERR_IO;
@@ -79,7 +80,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index) {
     unsigned char *buffer2 = NULL;
     size_t buffer_size = 0;
 
-    if (vips_jpegsave_buffer(resized_image, (void**)&buffer2, &buffer_size , NULL) != 0) {
+    if (vips_jpegsave_buffer(resized_image, (void**)&buffer2, &buffer_size, NULL) != 0) {
         free(buffer);
         buffer = NULL;
         g_object_unref(original_image);

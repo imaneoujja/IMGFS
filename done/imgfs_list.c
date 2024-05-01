@@ -13,7 +13,8 @@
  * @return some error code.
  */
 int do_list(const struct imgfs_file *imgfs_file,
-            enum do_list_mode output_mode, char **json) {
+            enum do_list_mode output_mode, char **json)
+{
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
@@ -28,7 +29,7 @@ int do_list(const struct imgfs_file *imgfs_file,
             if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
                 print_metadata(&(imgfs_file->metadata[i]));
                 valid_images++;
-            } 
+            }
         }
 
         // Or when no valid images

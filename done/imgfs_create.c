@@ -9,7 +9,8 @@
  * @param imgfs_filename Path to the imgFS file
  * @param imgfs_file In memory structure with header and metadata.
  */
-int do_create(const char* imgfs_filename, struct imgfs_file* imgfs_file){
+int do_create(const char* imgfs_filename, struct imgfs_file* imgfs_file)
+{
     M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(imgfs_file);
     FILE *filePointer;
@@ -24,18 +25,18 @@ int do_create(const char* imgfs_filename, struct imgfs_file* imgfs_file){
     // Write to disk the header
     imgfs_file->file= filePointer;
     size_t bytes_w = fwrite(&imgfs_file->header, sizeof(struct imgfs_header),  1,filePointer);
-    if (bytes_w != 1){
+    if (bytes_w != 1) {
         return ERR_IO;
     }
     // Allocate sufficient space for the maximum possible number of entries in metadata
     uint32_t num_files = imgfs_file->header.max_files;
     imgfs_file->metadata = calloc(num_files,sizeof(struct img_metadata));
-    if (imgfs_file->metadata == NULL){
+    if (imgfs_file->metadata == NULL) {
         return ERR_OUT_OF_MEMORY;
     }
     //Write metadata to disk
     bytes_w += fwrite(imgfs_file->metadata, sizeof(struct img_metadata),num_files,filePointer);
-    if (bytes_w != num_files+1){
+    if (bytes_w != num_files+1) {
         return ERR_IO;
     }
     printf("%zu item(s) written", bytes_w);

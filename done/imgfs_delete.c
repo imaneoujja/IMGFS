@@ -3,7 +3,8 @@
 #include "error.h"
 #include <string.h>
 
-int do_delete(const char* img_id, struct imgfs_file* imgfs_file) {
+int do_delete(const char* img_id, struct imgfs_file* imgfs_file)
+{
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
@@ -31,7 +32,7 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file) {
     if (fwrite(&imgfs_file->metadata[found], sizeof(struct img_metadata), 1, imgfs_file->file) != 1) {
         return ERR_IO;
     }
-    
+
 
     imgfs_file->header.nb_files--;
     imgfs_file->header.version++;
