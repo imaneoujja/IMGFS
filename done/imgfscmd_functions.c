@@ -193,3 +193,41 @@ int do_delete_cmd(int argc, char** argv)
     return ERR_NONE;
 }
 
+/**********************************************************************
+ *  Create the name of the file to use to save the read image
+ */
+static void create_name(const char* img_id, int resolution, char** new_name){
+    // Do nothing if parameters invalid
+    if (resolution < 0 || resolution >= NB_RES || img_id == NULL || new_name == NULL){
+        return;
+    }
+    const char* resolutions[] = {"_thumb", "_small", "_orig"};
+    size_t img_id_l = strlen(img_id);
+    size_t suffix_l = strlen(resolutions[resolution]);
+    size_t ext_l = strlen(".jpg");
+    size_t total_l = img_id_l + suffix_l + ext_l;
+    //new_name = image_id + resolution_suffix + '.jpg'
+    strncpy(*new_name, img_id, img_id_l);
+    strncat(*new_name, resolutions[resolution], suffix_l);
+    strncat(*new_name, ".jpg", ext_l);
+    (*new_name)[total_l] = '\0';
+}
+
+/**********************************************************************
+ * Write content of buffer to file
+ */
+static int write_disk_image(const char *filename, const char *image_buffer, uint32_t image_size){
+    // Check validty of pointers
+    M_REQUIRE_NON_NULL(filename);
+    M_REQUIRE_NON_NULL(image_buffer);
+    // Open file to write in binary mode
+    FILE* file = fopen(filename,"wb");
+    // Write content of buffer to file
+    size_t bytes_w = fwrite(image_buffer,image_size,1,file);
+    fclose(file);
+    if (bytes_w != 1){
+        return ERR_IO;
+    }
+    return ERR_NONE;
+}
+
