@@ -1,6 +1,6 @@
 #include "imgfs.h"
 #include "util.h"
-#include <stdio.h>         // for sprintf
+#include <stdio.h>         // for printf
 #include <string.h>        // for strcmp
 
 /**

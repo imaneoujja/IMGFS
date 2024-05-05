@@ -31,7 +31,7 @@ struct command_mapping commands[] = {
     {"delete", do_delete_cmd}
 };
 
-// Constant of the umber of commands in the commands array
+// Constant of the number of commands in the commands array
 #define NUM_COMMANDS (sizeof(commands) / sizeof(commands[0]))
 
 
@@ -44,11 +44,11 @@ int main(int argc, char* argv[])
     M_REQUIRE_NON_NULL(argv);
 
     // Initialize VIPS library
-    if (VIPS_INIT(argv[0])) {  
+    if (VIPS_INIT(argv[0])) {
         return ERR_IMGLIB;
     }
     int ret = 0;
-    // Not enough arguments 
+    // Not enough arguments
     if (argc < 2) {
         ret = ERR_NOT_ENOUGH_ARGUMENTS;
     } else {
@@ -82,6 +82,6 @@ int main(int argc, char* argv[])
     }
     vips_shutdown();
 
-    // Return the error 
+    // Return the error
     return ret;
 }

@@ -5,6 +5,15 @@
 #include <vips/vips.h>
 #include <stdlib.h>
 
+
+/**
+ * @brief Lazily resizes an image to the requested resolution.
+ *
+ * @param resolution the resolution to which the image should be resized
+ * @param imgfs_file pointer to the imgFS file structure
+ * @param index index of the image in the metadata
+ * @return an error code indicating the success or failure of the operation.
+ */
 int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
 {
     // Check the validity  of arguments
@@ -29,7 +38,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
         return ERR_NONE;
     }
 
-    // Read the original image from disk into buffer
+    // Read the original image from disk into buffer and allocate space for buffer
     VipsImage *original_image;
     unsigned char *buffer = malloc(imgfs_file->metadata[index].size[ORIG_RES]);
     if (buffer == NULL) {
@@ -37,7 +46,8 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
         buffer = NULL;
         return ERR_OUT_OF_MEMORY;
     }
-    if (fseek(imgfs_file->file,imgfs_file->metadata[index].offset[ORIG_RES],SEEK_SET) != ERR_NONE) {
+    //Seek offset at which image is stored
+    if (fseek(imgfs_file->file,(long)imgfs_file->metadata[index].offset[ORIG_RES],SEEK_SET) != ERR_NONE) {
         free(buffer);
         buffer = NULL;
         return ERR_IO;
@@ -47,6 +57,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
         buffer = NULL;
         return ERR_IO;
     }
+    //Create VipsImage from buffer
     if (vips_jpegload_buffer(buffer,imgfs_file->metadata[index].size[ORIG_RES],&original_image, NULL)!=ERR_NONE) {
         free(buffer);
         buffer = NULL;
@@ -79,9 +90,9 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
 
     // Save the resized image to a buffer
     unsigned char *buffer2 = NULL;
-    size_t buffer_size = 0;
+    uint32_t buffer_size = 0;
 
-    if (vips_jpegsave_buffer(resized_image, (void**)&buffer2, &buffer_size, NULL) != 0) {
+    if (vips_jpegsave_buffer(resized_image, (void**)&buffer2, (size_t *)&buffer_size, NULL) != 0) {
         free(buffer);
         buffer = NULL;
         g_object_unref(original_image);
@@ -101,7 +112,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     }
     // Update metadata in memory and on disk
     imgfs_file->metadata[index].size[resolution] = buffer_size;
-    imgfs_file->metadata[index].offset[resolution] = ftell(imgfs_file->file);
+    imgfs_file->metadata[index].offset[resolution] = (uint64_t) ftell(imgfs_file->file);
     if (fwrite(buffer2, buffer_size, 1, imgfs_file->file) != 1) {
         g_free(buffer2);
         buffer2 = NULL;
@@ -111,7 +122,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     g_free(buffer2);
     buffer2 = NULL;
 
-    if (fseek(imgfs_file->file, sizeof(struct imgfs_header) + (index * sizeof(struct img_metadata)), SEEK_SET) != 0) {
+    if (fseek(imgfs_file->file, (long)(sizeof(struct imgfs_header) + (index * sizeof(struct img_metadata))), SEEK_SET) != 0) {
         return ERR_IO;
     }
     if (fwrite(&imgfs_file->metadata[index], sizeof(struct img_metadata), 1, imgfs_file->file) != 1) {

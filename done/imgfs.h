@@ -44,7 +44,7 @@
 extern "C" {
 #endif
 
-// Structure representing the header of the ImgFS 
+// Structure representing the header of the ImgFS
 struct imgfs_header {
     char name[MAX_IMGFS_NAME + 1];
     uint32_t version;

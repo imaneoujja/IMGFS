@@ -9,7 +9,8 @@
  * @param imgfs_file pointer to the imgFS file structure
  * @return an error code indicating the success or failure of the operation.
  */
-int do_delete(const char* img_id, struct imgfs_file* imgfs_file) {
+int do_delete(const char* img_id, struct imgfs_file* imgfs_file)
+{
 
 
     // Checking the validity of the parameters
@@ -18,8 +19,8 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file) {
 
     int img_found = ERR_IMAGE_NOT_FOUND;
 
-    // Find image reference in the metadata 
-    for (uint32_t i = 0; i < imgfs_file->header.max_files; ++i) {
+    // Find image reference in the metadata
+    for (int i = 0; i < (int)imgfs_file->header.max_files; ++i) {
         if (imgfs_file->metadata[i].is_valid == NON_EMPTY && strcmp(imgfs_file->metadata[i].img_id, img_id) == 0) {
             img_found = i;
             break;
@@ -29,11 +30,11 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file) {
     // Image reference does not exist
     if (img_found == ERR_IMAGE_NOT_FOUND) return ERR_IMAGE_NOT_FOUND;
 
-    // Image deleted by invalidating the reference 
+    // Image deleted by invalidating the reference
     imgfs_file->metadata[img_found].is_valid = EMPTY;
 
-    // Set the position in the correct position
-    fseek(imgfs_file->file, sizeof(struct imgfs_header) + img_found * sizeof(struct img_metadata), SEEK_SET);
+    // Set the position to write the updated metadata to the file
+    fseek(imgfs_file->file, (long)(sizeof(struct imgfs_header) + (unsigned long)(img_found) * sizeof(struct img_metadata)), SEEK_SET);
     if (fwrite(&imgfs_file->metadata[img_found], sizeof(struct img_metadata), 1, imgfs_file->file) != 1) {
         return ERR_IO;
     }
@@ -45,7 +46,7 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file) {
     imgfs_file->header.nb_files--;
     imgfs_file->header.version++;
 
-    // Return error code if write operation fails
+    // Write updated header to disk
     if (fwrite(&imgfs_file->header, sizeof(struct imgfs_header), 1, imgfs_file->file) != 1) {
         return ERR_IO;
     }

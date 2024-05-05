@@ -13,6 +13,7 @@ typedef int bool;
  */
 int do_name_and_content_dedup(struct imgfs_file* imgfs_file, uint32_t index)
 {
+    // Checking the validity of the pointers
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
     size_t num_files = imgfs_file->header.nb_files;
