@@ -230,4 +230,29 @@ static int write_disk_image(const char *filename, const char *image_buffer, uint
     }
     return ERR_NONE;
 }
+int do_insert_cmd(int argc, char **argv)
+{
+    M_REQUIRE_NON_NULL(argv);
+    if (argc != 3) return ERR_NOT_ENOUGH_ARGUMENTS;
+
+    struct imgfs_file myfile;
+    zero_init_var(myfile);
+    int error = do_open(argv[0], "rb+", &myfile);
+    if (error != ERR_NONE) return error;
+
+    char *image_buffer = NULL;
+    uint32_t image_size;
+
+    // Reads image from the disk.
+    error = read_disk_image (argv[2], &image_buffer, &image_size);
+    if (error != ERR_NONE) {
+        do_close(&myfile);
+        return error;
+    }
+
+    error = do_insert(image_buffer, image_size, argv[1], &myfile);
+    free(image_buffer);
+    do_close(&myfile);
+    return error;
+}
 
