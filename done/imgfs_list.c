@@ -15,6 +15,7 @@
 int do_list(const struct imgfs_file *imgfs_file,
             enum do_list_mode output_mode, char **json)
 {
+    // Checking the validity of the pointers
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);

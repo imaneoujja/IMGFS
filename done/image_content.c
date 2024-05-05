@@ -7,9 +7,10 @@
 
 int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
 {
-    // Check the legitimacy of arguments
+    // Check the validity  of arguments
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
+
     if (index >= imgfs_file->header.max_files || index<0 || imgfs_file->metadata[index].is_valid == 0) {
         return ERR_INVALID_IMGID;
     }

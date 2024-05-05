@@ -44,7 +44,7 @@
 extern "C" {
 #endif
 
-
+// Structure representing the header of the ImgFS 
 struct imgfs_header {
     char name[MAX_IMGFS_NAME + 1];
     uint32_t version;
@@ -55,6 +55,7 @@ struct imgfs_header {
     uint64_t unused_64;
 };
 
+// Structure representing metadata for the image
 struct img_metadata {
     char img_id[MAX_IMG_ID + 1];
     unsigned char SHA[SHA256_DIGEST_LENGTH];
@@ -65,6 +66,7 @@ struct img_metadata {
     uint16_t unused_16;
 };
 
+// Structure representing the ImgFS file
 struct imgfs_file {
     FILE* file;
     struct imgfs_header header;

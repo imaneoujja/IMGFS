@@ -11,8 +11,10 @@
  */
 int do_create(const char* imgfs_filename, struct imgfs_file* imgfs_file)
 {
+    //Checking the validity of the pointers 
     M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(imgfs_file);
+    
     FILE *filePointer;
     // Set imgfs_file name to CAT_TXT
     strncpy(imgfs_file->header.name, CAT_TXT, sizeof(imgfs_file->header.name) - 1);

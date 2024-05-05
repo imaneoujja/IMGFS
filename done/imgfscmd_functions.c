@@ -155,33 +155,41 @@ int do_create_cmd(int argc, char** argv)
  */
 int do_delete_cmd(int argc, char** argv)
 {
+    // Check the validity of the pointer
     M_REQUIRE_NON_NULL(argv);
+
+    // Return error code if not enough arguments
     if (argc < 2) {
         return ERR_NOT_ENOUGH_ARGUMENTS;
     }
 
-
+    // Extracting the filename and the ID
     const char* imgfs_filename = argv[0];
     const char* img_id = argv[1];
 
+    // Return error when img_id is empty or exceeds maximum length
     if (img_id == NULL || strlen(img_id) > MAX_IMG_ID) {
         return ERR_INVALID_IMGID;
     }
 
     struct imgfs_file imgfs_file;
+    // Open imgFS file for reading and writing, return error if fail
     int ret = do_open(imgfs_filename, "rb+", &imgfs_file);
     if (ret != ERR_NONE) {
         return ret;
     }
 
+    // Delete the image from the imgFS file, return error if fail
     ret = do_delete(img_id, &imgfs_file);
     if (ret != ERR_NONE) {
         do_close(&imgfs_file);
         return ret;
     }
 
+    //Close ImgFS file
     do_close(&imgfs_file);
 
+    //All good
     return ERR_NONE;
 }
 

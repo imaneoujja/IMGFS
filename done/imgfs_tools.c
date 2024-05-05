@@ -78,37 +78,38 @@ int do_open(const char* imgfs_filename,
             const char* open_mode,
             struct imgfs_file* imgfs_file)
 {
+    //Checking the validity of the pointers
     M_REQUIRE_NON_NULL(imgfs_filename);
     M_REQUIRE_NON_NULL(open_mode);
     M_REQUIRE_NON_NULL(imgfs_file);
 
     // Open file in open_mode
     imgfs_file->file=fopen(imgfs_filename,open_mode);
-    if (imgfs_file->file ==NULL) {
-        return ERR_IO;
-    }
+    if (imgfs_file->file ==NULL) return ERR_IO;
 
-    // Read header from file
+    // Read the contents of the header             
     if (fread(&(imgfs_file->header), sizeof(struct imgfs_header), 1, imgfs_file->file) != 1) {
-        fclose(imgfs_file->file);
         return ERR_IO;
     }
-    // Allocate enough memory for max possible number of entries in metadata array
+    // Allocate memory in metadata array
     imgfs_file->metadata = calloc(imgfs_file->header.max_files, sizeof(struct img_metadata));
     if (imgfs_file->metadata == NULL) {
-        fclose(imgfs_file->file);
         return ERR_OUT_OF_MEMORY;
     }
-    // Read each metadata entry from file and in case an error is encountered, close the file
-    for (int i=0; i<(int)(imgfs_file->header.max_files); i++) {
-        size_t read = fread(&imgfs_file->metadata[i],sizeof(struct img_metadata), 1, imgfs_file->file);
+
+    // Read the contents of the metadata
+    int i = 0;  
+    while (i < (int)(imgfs_file->header.max_files)) {
+        size_t read = fread(&imgfs_file->metadata[i], sizeof(struct img_metadata), 1, imgfs_file->file);
         if (read != 1) {
             fclose(imgfs_file->file);
             free(imgfs_file->metadata);
             return ERR_IO;
         }
+        i++; 
     }
-
+   
+    // All good
     return ERR_NONE;
 
 }

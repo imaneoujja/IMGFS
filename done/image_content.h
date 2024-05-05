@@ -17,16 +17,6 @@ extern "C" {
 #endif
 
 /**
- * @brief Gets the resolution of an image.
- *
- * @param height Where to put the calculated image height.
- * @param width Where to put the calculated image width.
- * @param filename The image file name.
- * @return Some error code. 0 if no error.
- */
-int get_resolution(uint32_t *height, uint32_t *width, const char *image_buffer, size_t image_size);
-
-/**
  * @brief Calls the create_resized_img function and updates the metadata on the disk
  *
  * @param resolution
