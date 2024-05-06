@@ -2,18 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include "error.h"
-#include <errno.h>
 #include "socket_layer.h"
 
 #define MAX_FILENAME_LENGTH 256
 #define MAX_BUFFER_SIZE 2048
 #define ACK "ACK"
-#define BIG_FILE "Big file";
-#define SMALL_FILE "Small file";
+#define BIG_FILE "Big file"
+#define SMALL_FILE "Small file"
 
 
 int main(int argc, char *argv[]) {

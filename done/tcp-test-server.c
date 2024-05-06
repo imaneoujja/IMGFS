@@ -7,12 +7,13 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "error.h"
+#include "socket_layer.h"
 
 #define MAX_FILENAME_LENGTH 256
 #define MAX_BUFFER_SIZE 2048
 #define ACK "ACK"
-#define BIG_FILE "Big file";
-#define SMALL_FILE "Small file";
+#define BIG_FILE "Big file"
+#define SMALL_FILE "Small file"
 
 int main(int argc, char *argv[]) {
     // Check only one argument: the port
@@ -20,7 +21,8 @@ int main(int argc, char *argv[]) {
         return ERR_NOT_ENOUGH_ARGUMENTS;
     }
     // Initialise server socket
-    if( (int socket_id = tcp_server_init(argv[0]))<0){
+    int socket_id = tcp_server_init(argv[0]);
+    if( socket_id<0){
         perror("Error creating socket");
         close(socket_id);
         return socket_id;
@@ -30,22 +32,23 @@ int main(int argc, char *argv[]) {
     while (1) {
 
         // Accept connection
-        if ((int client_id = tcp_accept(socket_id))<0){
+        int client_id = tcp_accept(socket_id);
+        if (client_id <0){
             perror("Error accepting connection \n");
             close(client_id);
             continue;
         };
         // Wait for size
-        printf("Waiting for a size...\n", client_id);
+        printf("Waiting for a size...\n");
         long file_size;
-        if (tcp_read(client_id, (char*) &file_size), sizeof(file_size)) < 0) {
+        if (tcp_read(client_id, (char*) &file_size), sizeof(file_size)<0)  {
             perror("Error reading size from client \n");
             close(client_id);
             continue;
         }
         printf("Received a size: %s --> ",file_size);
         // Check if size is too big
-        char ack[];
+        char ack[sizeof(SMALL_FILE)];
         if (atoi(file_size) > MAX_BUFFER_SIZE) {
             strncpy(ack, BIG_FILE, sizeof(BIG_FILE));
         } else {
@@ -60,7 +63,7 @@ int main(int argc, char *argv[]) {
         printf("accepted\n");
         // Wait for file
         printf("About to receive a file of %d bytes\n", file_size);
-        char buffer[MAX_FILE_SIZE];
+        char buffer[file_size];
         ssize_t bytes_received = tcp_read(client_id, buffer, file_size);
         // Check if file was received correctly
         if (bytes_received != file_size) {
