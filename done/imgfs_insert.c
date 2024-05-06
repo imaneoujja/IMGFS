@@ -1,6 +1,7 @@
 #include "imgfs.h"  // for struct imgfs_file
 #include <string.h> // for strncmp
 #include "image_dedup.h" // for do_name_and_content_dedup()
+#include "error.h" // for error codes
 /**
  * @brief Insert image in the imgFS file
  *
@@ -16,10 +17,10 @@ int do_insert(const char* image_buffer, size_t image_size,
     M_REQUIRE_NON_NULL(img_id);
     M_REQUIRE_NON_NULL(image_buffer);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
-    if (imgfs_file.imgfs_header.nb_files >= imgfs_file.imgfs_header.max_files){
+    if (imgfs_file->header.nb_files >= imgfs_file->header.max_files){
         return ERR_IMGFS_FULL;
     }
-    for (int i=0;i<imgfs_file.header.nb_files;i++){
+    for (int i=0;i<imgfs_file->header.nb_files;i++){
         //Check if image is empty
         if (!imgfs_file->metadata[i].is_valid){
             //Initialize the metadata
@@ -33,7 +34,8 @@ int do_insert(const char* image_buffer, size_t image_size,
             if (error != ERR_NONE){
                 return error;
             }
-            imgfs_file->metadata[i].orig_res = {width*,height*};
+            imgfs_file->metadata[i].orig_res[0] = *width;
+            imgfs_file->metadata[i].orig_res[1] = *height;
             imgfs_file->metadata[i].is_valid = NON_EMPTY;
             //Check whether image is already in database or img_id belongs to another image
             error = do_name_and_content_dedup(imgfs_file,i);
@@ -48,14 +50,12 @@ int do_insert(const char* image_buffer, size_t image_size,
                 }
             }
             //Update all the necessary image database header fields and write header to file
-            imgfs_file.header.version += 1;
-            imgfs_file.header.nb_files += 1;
-            bytes_w = fwrite(&imgfs_file.header,sizeof(struct imgfs_header),1,imgfs_file->file);
-            if (bytes_w != 1){
+            imgfs_file->header.version += 1;
+            imgfs_file->header.nb_files += 1;
+            if (fwrite(&imgfs_file->header,sizeof(struct imgfs_header),1,imgfs_file->file) != 1){
                 return ERR_IO;
             }
-            bytes_w = fwrite(&imgfs_file->metadata[i], sizeof(struct img_metadata),1,imgfs_file->file);
-            if (bytes_w != 1){
+            if (fwrite(&imgfs_file->metadata[i], sizeof(struct img_metadata),1,imgfs_file->file) != 1){
                 return ERR_IO;
             }
             return ERR_NONE;
