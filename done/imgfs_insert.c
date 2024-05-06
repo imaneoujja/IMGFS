@@ -1,6 +1,7 @@
 #include "imgfs.h"  // for struct imgfs_file
 #include <string.h> // for strncmp
 #include "image_dedup.h" // for do_name_and_content_dedup()
+#include "error.h" // for error codes
 /**
  * @brief Insert image in the imgFS file
  *
