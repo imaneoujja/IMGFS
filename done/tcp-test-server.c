@@ -16,12 +16,12 @@
 #define SMALL_FILE "Small file"
 
 int main(int argc, char *argv[]) {
-    // Check only one argument: the port
-    if (argc != 1) {
+    // Check only two arguments: the program name and port
+    if (argc != 2) {
         return ERR_NOT_ENOUGH_ARGUMENTS;
     }
     // Initialise server socket
-    int socket_id = tcp_server_init(argv[0]);
+    int socket_id = tcp_server_init(argv[1]);
     if( socket_id<0){
         perror("Error creating socket");
         close(socket_id);
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
         // Wait for size
         printf("Waiting for a size...\n");
         long file_size;
-        if (tcp_read(client_id, (char*) &file_size), sizeof(file_size)<0)  {
+        if (tcp_read(client_id, (char*) &file_size, sizeof(file_size)<0))  {
             perror("Error reading size from client \n");
             close(client_id);
             continue;
