@@ -1,4 +1,4 @@
-# Makefile for CS-202 course - spring 2024
+# Makefile.week11 for CS-202 course - spring 2024
 # Author: Ludovic Mermod, Jean-Cédric Chappelier & Édouard Bugnion
 # Date: Mars 2024
 
@@ -143,7 +143,6 @@ endef
 end2end-tests: $(TARGETS)
 	$(call e2e_test,week07.robot)
 	$(call e2e_test,week08.robot)
-	$(call e2e_test,week10.robot)
 
 check: end2end-tests unit-tests
 
