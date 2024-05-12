@@ -1,79 +1,54 @@
 #include "imgfs.h"  // for struct imgfs_file
-#include <string.h> // for strncmp
-#include "error.h" // for error codes
-#include "image_dedup.h" // for do_name_and_content_dedup()
+#include <string.h>
+#define true 1
+#define false 0
+typedef int bool;
+
 /**
- * @brief Insert image in the imgFS file
+ * @brief Does image deduplication.
  *
- * @param buffer Pointer to the raw image content
- * @param size Image size
- * @param img_id Image ID
+ * @param imgfs_file The main in-memory structure
+ * @param index The order number in the metadata array
  * @return Some error code. 0 if no error.
  */
-int do_insert(const char* image_buffer, size_t image_size,
-              const char* img_id, struct imgfs_file* imgfs_file){
+int do_name_and_content_dedup(struct imgfs_file* imgfs_file, uint32_t index)
+{
     // Checking the validity of the pointers
     M_REQUIRE_NON_NULL(imgfs_file);
-    M_REQUIRE_NON_NULL(img_id);
-    M_REQUIRE_NON_NULL(image_buffer);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
-    if (imgfs_file->header.nb_files >= imgfs_file->header.max_files){
-        return ERR_IMGFS_FULL;
+    size_t max_files = imgfs_file->header.max_files;
+    size_t num_files = imgfs_file->header.nb_files;
+    bool hasDuplicate = 0;
+    if (index >= max_files || !imgfs_file->metadata[index].is_valid) {
+        return ERR_IMAGE_NOT_FOUND;
     }
-
-    for (int i=0;i<imgfs_file->header.max_files;i++){
-        //Check if image is empty
-        if (!imgfs_file->metadata[i].is_valid){
-
-            //Initialize the metadata
-            memset(&imgfs_file->metadata[i],0,sizeof(struct img_metadata));
-            SHA256(image_buffer, image_size,imgfs_file->metadata[i].SHA );
-            strncpy(imgfs_file->metadata[i].img_id, img_id,MAX_IMG_ID + 1);
-            imgfs_file->metadata[i].size[ORIG_RES] = (uint32_t)image_size;
-            uint32_t height;
-            uint32_t width;
-            //Get width and height
-            int error = get_resolution(&height, &width,image_buffer, image_size);
-            if (error != ERR_NONE){
-                return error;
+    struct img_metadata *image_i = &imgfs_file->metadata[index];
+    // i is the number of images checked
+    size_t i =0;
+    // j is the number of valid images
+    size_t j =0;
+    while (j<num_files && i<max_files) {
+        // Check that image is valid, and it is not the same as the one at position index
+        if (imgfs_file->metadata[i].is_valid && i!=index) {
+            // Image ID should be unique for each index
+            if (strncmp(imgfs_file->metadata[i].img_id, image_i->img_id, 127) == 0) {
+                return ERR_DUPLICATE_ID;
             }
-            imgfs_file->metadata[i].orig_res[0] = width;
-            imgfs_file->metadata[i].orig_res[1] = height;
-
-            imgfs_file->metadata[i].is_valid = NON_EMPTY;
-            //Check whether image is already in database or img_id belongs to another image
-            error = do_name_and_content_dedup(imgfs_file,i);
-            if (error != ERR_NONE){
-                return error;
-            }
-            //If image is not already in database, write it at the end of file
-            if (imgfs_file->metadata[i].offset[ORIG_RES] == 0){
-                if (fseek(imgfs_file->file,0,SEEK_END) != ERR_NONE){
-                    return ERR_IO;
+            // Same SHA is equivalent to same image content
+            if (memcmp(imgfs_file->metadata[i].SHA, image_i->SHA, SHA256_DIGEST_LENGTH) == 0) {
+                for (int z = 0; z < NB_RES; z++) {
+                    // Modify the metadata at the index position, to reference the attributes of the copy found
+                    image_i->offset[z] = imgfs_file->metadata[i].offset[z];
                 }
-                size_t bytes_w = fwrite(image_buffer, image_size,1,imgfs_file->file);
-                if (bytes_w != 1){
-                    return ERR_IO;
-                }
-                imgfs_file->metadata[i].offset[ORIG_RES] = ftell(imgfs_file->file) - image_size;
+                hasDuplicate = 1;
             }
-            //Update all the necessary image database header fields and write header to file
-            imgfs_file->header.version += 1;
-            imgfs_file->header.nb_files += 1;
-            if (fseek(imgfs_file->file,0,SEEK_SET) != ERR_NONE) {
-                return ERR_IO;
-            }
-            if (fwrite(&imgfs_file->header,sizeof(struct imgfs_header),1,imgfs_file->file) != 1){
-                return ERR_IO;
-            }
-
-            if (fseek(imgfs_file->file,sizeof(struct img_metadata)*i,SEEK_CUR) != ERR_NONE) {
-                return ERR_IO;
-            }
-            if (fwrite(&imgfs_file->metadata[i], sizeof(struct img_metadata),1,imgfs_file->file) != 1){
-                return ERR_IO;
-            }
-            return ERR_NONE;
+            j++;
         }
+        i++;
     }
+    // ORIG_RES offset set to 0 if image at position index has no duplicate content
+    if (!hasDuplicate) {
+        image_i->offset[ORIG_RES] = 0;
+    }
+    return ERR_NONE;
 }

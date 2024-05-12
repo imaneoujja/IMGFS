@@ -30,7 +30,8 @@ static const uint16_t MAX_SMALL_RES = 512;
  ********************************************************************** */
 int help(int useless _unused, char** useless_too _unused)
 {
-    printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
+
+printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
     printf("  help: displays this help.\n");
     printf("  list <imgFS_filename>: list imgFS content.\n");
     printf("  create <imgFS_filename> [options]: create a new imgFS.\n");
@@ -44,6 +45,10 @@ int help(int useless _unused, char** useless_too _unused)
     printf("          -small_res <X_RES> <Y_RES>: resolution for small images.\n");
     printf("                                  default value is 256x256\n");
     printf("                                  maximum value is 512x512\n");
+    printf("  read <imgFS_filename> <imgID> [original|orig|thumbnail|thumb|small]:\n");
+    printf("      read an image from the imgFS and save it to a file.\n");
+    printf("      default resolution is \"original\".\n");
+    printf("  insert <imgFS_filename> <imgID> <filename>: insert a new image in the imgFS.\n");
     printf("  delete <imgFS_filename> <imgID>: delete image imgID from imgFS.\n");
     return ERR_NONE;
 }
@@ -253,6 +258,40 @@ int do_insert_cmd(int argc, char **argv)
     error = do_insert(image_buffer, image_size, argv[1], &myfile);
     free(image_buffer);
     do_close(&myfile);
+    return error;
+}
+
+int do_read_cmd(int argc, char **argv)
+{
+    M_REQUIRE_NON_NULL(argv);
+    if (argc != 2 && argc != 3) return ERR_NOT_ENOUGH_ARGUMENTS;
+
+    const char * const img_id = argv[1];
+
+    const int resolution = (argc == 3) ? resolution_atoi(argv[2]) : ORIG_RES;
+    if (resolution == -1) return ERR_RESOLUTIONS;
+
+    struct imgfs_file myfile;
+    zero_init_var(myfile);
+    int error = do_open(argv[0], "rb+", &myfile);
+    if (error != ERR_NONE) return error;
+
+    char *image_buffer = NULL;
+    uint32_t image_size = 0;
+    error = do_read(img_id, resolution, &image_buffer, &image_size, &myfile);
+    do_close(&myfile);
+    if (error != ERR_NONE) {
+        return error;
+    }
+
+    // Extracting to a separate image file.
+    char* tmp_name = NULL;
+    create_name(img_id, resolution, &tmp_name);
+    if (tmp_name == NULL) return ERR_OUT_OF_MEMORY;
+    error = write_disk_image(tmp_name, image_buffer, image_size);
+    free(tmp_name);
+    free(image_buffer);
+
     return error;
 }
 

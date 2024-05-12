@@ -28,7 +28,9 @@ struct command_mapping commands[] = {
     {"list", do_list_cmd},
     {"create", do_create_cmd},
     {"help", help},
-    {"delete", do_delete_cmd}
+    {"delete", do_delete_cmd},
+    {"insert", do_insert_cmd},
+    {"read",do_read_cmd}
 };
 
 // Constant of the number of commands in the commands array
