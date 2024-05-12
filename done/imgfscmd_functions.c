@@ -201,21 +201,21 @@ int do_delete_cmd(int argc, char** argv)
 /**********************************************************************
  *  Create the name of the file to use to save the read image
  */
+
 static void create_name(const char* img_id, int resolution, char** new_name){
-    // Do nothing if parameters invalid
-    if (resolution < 0 || resolution >= NB_RES || img_id == NULL || new_name == NULL){
+    if (resolution < 0 || resolution >= NB_RES  || img_id == NULL || new_name == NULL){
         return;
     }
     const char* resolutions[] = {"_thumb", "_small", "_orig"};
-    size_t img_id_l = strlen(img_id);
-    size_t suffix_l = strlen(resolutions[resolution]);
-    size_t ext_l = strlen(".jpg");
-    size_t total_l = img_id_l + suffix_l + ext_l;
-    //new_name = image_id + resolution_suffix + '.jpg'
-    strncpy(*new_name, img_id, img_id_l);
-    strncat(*new_name, resolutions[resolution], suffix_l);
-    strncat(*new_name, ".jpg", ext_l);
-    (*new_name)[total_l] = '\0';
+    const char* extension = ".jpg";
+    size_t name_length = strlen(img_id) + strlen(resolutions[resolution]) + strlen(extension) + 1;
+
+    *new_name = (char*) malloc(name_length);
+    if (*new_name == NULL) {
+        return;
+    }
+
+    snprintf(*new_name, name_length, "%s%s%s", img_id, resolutions[resolution], extension);
 }
 
 /**********************************************************************
