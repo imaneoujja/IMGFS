@@ -1,11 +1,8 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include "error.h"
 #include "socket_layer.h"
 
@@ -42,15 +39,22 @@ int main(int argc, char *argv[]) {
         };
         // Wait for size
         printf("Waiting for a size...\n");
-        char length[5];
+        char length[6];
         if (tcp_read(client_id, length, sizeof(length))<0)  {
             perror("Error reading size from client \n");
             close(client_id);
             continue;
         }
-        printf("Received a size: %s --> ",length);
+        // Remove delimiter character
+        char lengthNoDelimiter[5];
+        int i;
+        for(i = 0; length[i] != '|' && i < 4;i++){
+            lengthNoDelimiter[i] = length[i];
+        }
+        lengthNoDelimiter[i] = '\0';
+        printf("Received a size: %s --> ",lengthNoDelimiter);
         // Check if size is too big
-        int file_size = atoi(length);
+        int file_size = atoi(lengthNoDelimiter);
         if (file_size > MAX_BUFFER_SIZE) {
             if (tcp_send(client_id, BIG_FILE, strlen(BIG_FILE)) < strlen(BIG_FILE)) {
                 printf("rejected\n");

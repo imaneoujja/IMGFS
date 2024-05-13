@@ -60,8 +60,8 @@ int main(int argc, char *argv[]) {
     }
     printf("Talking to %d \n", port);
     // Send length to server
-    char length[5];
-    sprintf(length,"%zd",file_size);
+    char length[6];
+    sprintf(length,"%zd|",file_size);
     ssize_t bytes_sent = tcp_send(sockfd, length, sizeof(length));
     if (bytes_sent != sizeof(length)) {
         perror("Error sending size to server");
@@ -101,4 +101,3 @@ int main(int argc, char *argv[]) {
     printf("Accepted \n");
     printf("Done \n");
     return 0;
-}
