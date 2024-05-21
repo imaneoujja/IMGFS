@@ -1,0 +1,74 @@
+- time.csv: 3          # max 3, 
+- imgfs.h: # NE PAS REMPLIR CETTE LIGNE
+     imgfs_header: 3      # max 3, 
+     imgfs_metadata: 3    # max 3, 
+     imgfs_file: 2        # max 2, 
+- imgfs_tools.c: # NE PAS REMPLIR CETTE LIGNE
+  - do_open: # NE PAS REMPLIR CETTE LIGNE
+       arguments tests: 1              # max 1, 
+       open + error test: 2.5          # max 2.5, 
+       read header + error test: 2.5   # max 2.5, 
+       alloc. dyn. + test: 2.5         # max 2.5, 
+       read metadata + error test: 2   # max 2.5, max_files might not fit in an integer (-0.5)
+  - do_close: 2.5                        # max 2.5, 
+- imgfs_list.c: # NE PAS REMPLIR CETTE LIGNE
+     argument tests: 0.5          # max 0.5, 
+     header print: 0.5            # max 0.5, 
+     empty case: 0.5              # max 0.5, 
+     loop: 0.5                    # max 0.5, 
+     is_valid test: 1             # max 1, 
+     print_metadata: 0.5          # max 0.5, 
+- imgfs_create.c: # NE PAS REMPLIR CETTE LIGNE
+     argument tests: 0.5          # max 0.5, 
+     init (version, num_file): 1  # max 1, 
+     metadata alloc: 1.5          # max 1.5, 
+     is_valid init: 1.5           # max 1.5, 
+     open: 1                      # max 1, 
+     error test open: 1.5         # max 1.5, 
+     write header: 1.25           # max 1.5, the header should not be written to disk before the metadata is initialized (-0.25)
+     write metadata: 1.5          # max 1.5, 
+     print good value: 0.5        # max 0.5, 
+     error handling: 1.5          # max 1.5, 
+- imgfs_delete.c: # NE PAS REMPLIR CETTE LIGNE
+     argument tests: 0.5          # max 0.5, 
+     optimization empty DB: 0     # max 1, the case nb_files == 0 is missing
+     search: 2.5                  # max 2.5, 
+     metadata rewrite: 2.5        # max 2.5, 
+     header update: 1.5           # max 1.5, 
+     header rewrite: 2            # max 2, 
+     error handling: 1.5          # max 1.5, 
+- image_content.c: # NE PAS REMPLIR CETTE LIGNE
+  - lazily_resize:  # NE PAS REMPLIR CETTE LIGNE
+       argument tests: 0.75           # max 1, invalid error code for erroneous resolutions (-0.25)
+       write at right position: 1     # max 1, 
+       error handling: 1              # max 1, 
+  - create_resized_img: # NE PAS REMPLIR CETTE LIGNE
+       read image: 5          # max 5, 
+       vips load: 2.5         # max 2.5, 
+       vips resize: 2.5       # max 2.5, 
+       vips save: 2.5         # max 2.5, 
+       write: 3               # max 3, 
+       metadata update: 2     # max 2, 
+       no leak (free): 2      # max 2, 
+       error handling: 1.5    # max 1.5, 
+- imgfscmd_functions.c: # NE PAS REMPLIR CETTE LIGNE
+      help: 0.75               # max 1, use provided constants (-0.25)
+      do_list_cmd: 1.5         # max 1.5, 
+      do_create_cmd: 6         # max 6, 
+      do_delete_cmd: 1.5       # max 1.5, 
+- imgfscmd.c: # NE PAS REMPLIR CETTE LIGNE
+  - arguments: # NE PAS REMPLIR CETTE LIGNE
+      command type: 1                # max 1, 
+      struct command_mapping: 1      # max 1, 
+      mapping array: 1               # max 1, 
+  - parsing args in main(): 2.5      # max 2.5, 
+  - VIPS init + shutdown: 1          # max 1, 
+- image_dedup.c: # NE PAS REMPLIR CETTE LIGNE
+  - compare SHA: 1         # max 1, 
+  - dedup:  # NE PAS REMPLIR CETTE LIGNE
+       argument tests: 0.5              # max 0.5, 
+       search (incl. valid): 2          # max 3, invalid loop condition (-1)
+       duplicate id: 1.5                # max 1.5, 
+       update duplicate content: 1.5    # max 2, size is not updated (-0.5)
+- style: 0           # max 2, min -2, (normal = 0), 
+- bonus/malus: -2.5  # max 5, min -5, (normal = 0), a single fread in do_open is sufficient (-0.5), copy-pasting in lazily-resize (-2)
