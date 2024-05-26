@@ -29,32 +29,83 @@ MK_OUR_ERR(ERR_INVALID_ARGUMENT);
 MK_OUR_ERR(ERR_OUT_OF_MEMORY);
 MK_OUR_ERR(ERR_IO);
 
-/*******************************************************************
+/***********************
  * Handle connection
  */
 static void* handle_connection(void *arg) {
-    M_REQUIRE_NON_NULL(arg);
-    int client_socket = *(int*)arg;
-    char buffer[MAX_HEADER_SIZE] = {0};
-    int read_bytes = tcp_read(client_socket, buffer, MAX_HEADER_SIZE - 1);
-    if (read_bytes < 0) {
-        close(client_socket);
-        return &our_ERR_IO;
+    if (arg == NULL ){
+        return &our_ERR_INVALID_ARGUMENT;
+    }
+    int c_socket = (intptr_t)arg;
+
+    char *rcvbuf = calloc(1, MAX_HEADER_SIZE);
+    if (!rcvbuf) {
+        return &our_ERR_OUT_OF_MEMORY;
     }
 
-    buffer[read_bytes] = '\0';  // Ensure null termination
-    if (strstr(buffer, "test: ok")) {
-        http_reply(client_socket, HTTP_OK, "Content-Type: text/plain" HTTP_LINE_DELIM, "Hello, world!", 12);
-    } else {
-        http_reply(client_socket, HTTP_BAD_REQUEST, NULL, "Bad Request", 11);
+    ssize_t bytes_read = 0;
+    struct http_message msg;
+    memset(&msg, 0, sizeof(msg));
+    int end_header = 0;
+    int content_length = 0;
+    int parse_result = 0;
+
+    while (1) {
+        ssize_t result = tcp_read(c_socket, rcvbuf + bytes_read, MAX_HEADER_SIZE - bytes_read);
+        if (result < 0) {
+            perror("Failed to read from socket");
+            close(c_socket);
+            free(rcvbuf);
+            rcvbuf = NULL;
+            return &our_ERR_IO;
+        }
+        bytes_read += result;
+
+        // Check if we have received the entire header
+        if (!end_header && strstr(rcvbuf, HTTP_HDR_END_DELIM) != NULL) {
+            end_header = 1;
+        }
+
+        parse_result = http_parse_message(rcvbuf, bytes_read, &msg, &content_length);
+        if (parse_result < 0) {
+            close(c_socket);
+            free(rcvbuf);
+            rcvbuf = NULL;
+            return &parse_result;
+        } else if (parse_result == 0) {
+            // If we have a partial message, we need to read more data
+            if (content_length > 0 && bytes_read < MAX_HEADER_SIZE + content_length) {
+                // Extend the buffer if needed and continue reading
+                rcvbuf = realloc(rcvbuf, MAX_HEADER_SIZE + content_length);
+                if (!rcvbuf) {
+                    perror("Failed to reallocate memory for receive buffer");
+                    close(c_socket);
+                    return &our_ERR_OUT_OF_MEMORY;
+                }
+                continue;
+            }
+        }
+
+        if (parse_result > 0 || end_header) {
+            // Full message received, call the callback
+            int callback_result = cb(&msg, c_socket);
+            if (callback_result != ERR_NONE) {
+                close(c_socket);
+                free(rcvbuf);
+                return &callback_result;
+            }
+            break;
+        }
     }
 
-    close(client_socket);
-    return ERR_NONE;
+    close(c_socket);
+    free(rcvbuf);
+    return &our_ERR_NONE;
+
 }
 
 
-/*******************************************************************
+/***********************
  * Init connection
  */
 int http_init(uint16_t port, EventCallback callback)
@@ -64,7 +115,7 @@ int http_init(uint16_t port, EventCallback callback)
     return passive_socket;
 }
 
-/*******************************************************************
+/***********************
  * Close connection
  */
 void http_close(void)
@@ -77,22 +128,22 @@ void http_close(void)
     }
 }
 
-/*******************************************************************
+/***********************
  * Receive content
  */
 int http_receive(void) {
-    while (1) {
-        int client_socket = tcp_accept(passive_socket);
-        if (client_socket < 0) {
-            perror("Error accepting connection");
-            continue;
-        }
-        handle_connection((void*)&client_socket);
+    
+    int client_socket = tcp_accept(passive_socket);
+    if (client_socket < 0) {
+        close(passive_socket);
+        return ERR_IO;
     }
+    handle_connection((void*)&client_socket);
+    
     return ERR_NONE;
 }
 
-/*******************************************************************
+/***********************
  * Serve a file content over HTTP
  */
 int http_serve_file(int connection, const char* filename)
@@ -101,31 +152,29 @@ int http_serve_file(int connection, const char* filename)
     return ret;
 }
 
-/*******************************************************************
+/***********************
  * Create and send HTTP reply
  */
 int http_reply(int connection, const char* status, const char* headers, const char* body, size_t body_len) {
     M_REQUIRE_NON_NULL(status);
     M_REQUIRE_NON_NULL(headers);
     M_REQUIRE_NON_NULL(body);
-    size_t header_size = snprintf(NULL, 0, "%s %s\r\n%sContent-Length: %zu\r\n\r\n",
-                                  HTTP_PROTOCOL_ID, status, headers ? headers : "", body_len) + 1;
 
-    char* response = malloc(header_size + body_len);
-    if (!response) {
-        return ERR_OUT_OF_MEMORY;
+
+    char* buffer = calloc (1,MAX_REQUEST_SIZE);
+    sprintf(buffer, "%s %s\r\n%sContent-Length: %zu\r\n\r\n",
+                                  HTTP_PROTOCOL_ID, status, HTTP_LINE_DELIM , 
+                                  headers, body_len , HTTP_HDR_END_DELIM, body);
+
+    ssize_t sent = tcp_send(connection, buffer, MAX_REQUEST_SIZE);
+     
+     if(sent < 0){
+        free(buffer);
+        buffer = NULL;
+        close(connection);
+        return ERR_IO;
     }
-
-    snprintf(response, header_size, "%s %s\r\n%sContent-Length: %zu\r\n\r\n",
-             HTTP_PROTOCOL_ID, status, headers ? headers : "", body_len);
-
-    // Append the body part
-    if (body && body_len > 0) {
-        memcpy(response + header_size - 1, body, body_len);
-    }
+    return ERR_NONE;
 
 
-    int send_result = tcp_send(connection, response, header_size + body_len - 1);
-    free(response);
-    return send_result;
 }

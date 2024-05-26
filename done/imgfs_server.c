@@ -16,14 +16,13 @@
 #include <unistd.h>
 #include <stdlib.h> // abort()
 
-/********************************************************************/
+/************************/
 static void signal_handler(int sig_num) {
-    printf("Received signal %d, shutting down...\n", sig_num);
     server_shutdown();
     exit(EXIT_SUCCESS);  // Ensure clean exit
 }
 
-/********************************************************************/
+/************************/
 static void set_signal_handler(void)
 {
     struct sigaction action;
@@ -40,10 +39,25 @@ static void set_signal_handler(void)
     }
 }
 
-/********************************************************************/
+/************************/
 
 int main (int argc, char *argv[])
 {
+    set_signal_handler();
+
+    int err = server_startup(argc, argv);
+    if (err != ERR_NONE) {
+        return err;
+    }
+
+    while (1) {
+        err = http_receive();
+        if (err != ERR_NONE) {
+            fprintf(stderr, "HTTP receive failed: %s\n", ERR_MSG(err));
+            break;
+        }
+    }
+
 
     return 0;
 }

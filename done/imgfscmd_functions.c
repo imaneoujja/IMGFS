@@ -295,3 +295,46 @@ int do_read_cmd(int argc, char **argv)
     return error;
 }
 
+int read_disk_image(const char *path, char **image_buffer, uint32_t *image_size) {
+    M_REQUIRE_NON_NULL(path);
+    M_REQUIRE_NON_NULL(image_buffer);
+    M_REQUIRE_NON_NULL(image_size);
+
+    // Open the file
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        return ERR_IO;
+    }
+
+    // Get the size of the file
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    if (size == -1) {
+        fclose(file);
+        return ERR_IO;
+    }
+    rewind(file);
+
+    // Allocate memory for the file content
+    *image_buffer = (char *)malloc(size);
+    if (!*image_buffer) {
+        fclose(file);
+        return ERR_OUT_OF_MEMORY;
+    }
+
+    // Read the file into the buffer
+    size_t read_size = fread(*image_buffer, 1, size, file);
+    if (read_size != (size_t)size) {
+        free(*image_buffer);
+        *image_buffer = NULL;
+        fclose(file);
+        return ERR_IO;
+    }
+
+    // Set the image size to the size of the file
+    *image_size = (uint32_t)size;
+
+    // Close the file
+    fclose(file);
+    return ERR_NONE;
+}
