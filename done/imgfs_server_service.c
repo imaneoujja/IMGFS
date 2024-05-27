@@ -26,36 +26,33 @@ static uint16_t server_port = DEFAULT_LISTENING_PORT;
 /***********************//*
  * Startup function. Create imgFS file and load in-memory structure.
  * Pass the imgFS file name as argv[1] and optionally port number as argv[2]
- ************************ */
+ ******************** */
 int server_startup(int argc, char **argv) {
     M_REQUIRE_NON_NULL(argv);
 
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <imgFS_filename> [port]\n", argv[0]);
+    if (argc < 3) {
         return ERR_NOT_ENOUGH_ARGUMENTS;
     }
 
     int err = do_open(argv[1], "rb+", &fs_file);
     if (err != ERR_NONE) {
-        fprintf(stderr, "Failed to open ImgFS file: %s\n", argv[1]);
-        return ERR_IO;
+        return err;
     }
 
     print_header(&fs_file.header);
 
     if (argc > 2) {
         err = atouint16(argv[2]);
-        if (err != ERR_NONE) {
-            do_close(&fs_file);
-            return ERR_INVALID_ARGUMENT;
+        if (err >= 1024) {
+            server_port = err;
         }
     } else {
         server_port = DEFAULT_LISTENING_PORT;
     }
 
-    err = http_init(server_port, handle_http_message);
-    if (err < 0) {
-        do_close(&fs_file);
+    int server_socket = http_init(server_port, handle_http_message);
+    if (server_socket < 0) {
+        http_close;
         return ERR_IO;
     }
 
@@ -65,7 +62,7 @@ int server_startup(int argc, char **argv) {
 
 /***********************//*
  * Shutdown function. Free the structures and close the file.
- ************************ */
+ ******************** */
 void server_shutdown(void) {
     fprintf(stderr, "Shutting down...\n");
     http_close();
@@ -74,7 +71,7 @@ void server_shutdown(void) {
 
 /************************
  * Sends error message.
- ************************ */
+ ******************** */
 static int reply_error_msg(int connection, int error)
 {
 #define ERR_MSG_SIZE 256
@@ -89,7 +86,7 @@ static int reply_error_msg(int connection, int error)
 
 /************************
  * Sends 302 OK message.
- ************************ */
+ ******************** */
 static int reply_302_msg(int connection)
 {
     char location[ERR_MSG_SIZE];
@@ -103,7 +100,7 @@ static int reply_302_msg(int connection)
 
 /************************
  * Simple handling of http message. TO BE UPDATED WEEK 13
- ************************ */
+ ******************** */
 int handle_http_message(struct http_message* msg, int connection)
 {
     M_REQUIRE_NON_NULL(msg);

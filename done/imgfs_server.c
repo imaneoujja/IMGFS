@@ -1,3 +1,4 @@
+
 /*
  * @file imgfs_server.c
  * @brief ImgFS server part, main
@@ -43,21 +44,17 @@ static void set_signal_handler(void)
 
 int main (int argc, char *argv[])
 {
-    set_signal_handler();
 
     int err = server_startup(argc, argv);
     if (err != ERR_NONE) {
         return err;
     }
 
-    while (1) {
-        err = http_receive();
-        if (err != ERR_NONE) {
-            fprintf(stderr, "HTTP receive failed: %s\n", ERR_MSG(err));
-            break;
-        }
-    }
+    while ((err = http_receive()) == ERR_NONE);
 
+    fprintf(stderr, "http_receive() failed\n");
+    fprintf(stderr, "%s\n", ERR_MSG(err));
+    set_signal_handler();
 
-    return 0;
+    return ERR_NONE;
 }
