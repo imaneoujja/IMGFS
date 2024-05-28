@@ -44,7 +44,6 @@ static void set_signal_handler(void)
 
 int main (int argc, char *argv[])
 {
-
     int err = server_startup(argc, argv);
     if (err != ERR_NONE) {
         return err;

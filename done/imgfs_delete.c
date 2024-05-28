@@ -22,14 +22,14 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file)
     uint32_t j = 0;
     // Find image reference in the metadata
     while (j<imgfs_file->header.nb_files && i < imgfs_file->header.max_files) {
-        ++i;
         if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
-            if (strncmp(img_id, imgfs_file->metadata[i].img_id, IMG_ID_SIZE) == 0) {
+            ++j;
+            if (strcmp(img_id, imgfs_file->metadata[i].img_id) == 0) {
                 img_found = i;
                 break;
             }
-            ++j;
         }
+        ++i;
     }
 
     // Image reference does not exist

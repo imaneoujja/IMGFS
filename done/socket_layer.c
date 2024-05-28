@@ -57,8 +57,10 @@ int tcp_accept(int passive_socket){
  */
 ssize_t tcp_read(int active_socket, char* buf, size_t buflen){
     // Check validity of arguments
+
     M_REQUIRE_NON_NULL(buf);
     if (buflen == 0 || active_socket < 0) {
+        perror("Error reading from socket");
         return ERR_INVALID_ARGUMENT;
     }
     return recv(active_socket, buf, buflen, 0);

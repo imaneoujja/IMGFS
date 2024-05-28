@@ -38,7 +38,7 @@ printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
     printf("      options are:\n");
     printf("          %s <MAX_FILES>: maximum number of files.\n", MAX_FILES_OPTION);
     printf("                                  default value is %d\n", default_max_files);
-    printf("                                  maximum value is %d\n", UINT32_MAX);
+    printf("                                  maximum value is %u\n", UINT32_MAX);
     printf("          %s <X_RES> <Y_RES>: resolution for thumbnail images.\n", THUMB_RES_OPTION);
     printf("                                  default value is %dx%d\n", default_thumb_res, default_thumb_res);
     printf("                                  maximum value is %dx%d\n", MAX_THUMB_RES, MAX_THUMB_RES);

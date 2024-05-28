@@ -31,17 +31,12 @@ MK_OUR_ERR(ERR_OUT_OF_MEMORY);
 MK_OUR_ERR(ERR_IO);
 
 
-/***********************
- * Handle connection
- */
+
 static void* handle_connection(void *arg) {
-    if (arg == NULL){
-        return &our_ERR_INVALID_ARGUMENT;
-    }
-    char* rcvbuf = calloc(1, MAX_HEADER_SIZE +1);
+    if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
+
+    char* rcvbuf = calloc(1, MAX_HEADER_SIZE );
     if (rcvbuf == NULL) return &our_ERR_OUT_OF_MEMORY;
-    char* nxt_message_buf = calloc(1, MAX_HEADER_SIZE +1);
-    if (nxt_message_buf == NULL) return &our_ERR_OUT_OF_MEMORY;
     int end_header = 0;
     int* c_socket = (intptr_t)arg;
     ssize_t bytes_read = 0;
@@ -49,67 +44,66 @@ static void* handle_connection(void *arg) {
     memset(&msg, 0, sizeof(msg));
     int content_length = 0;
     int extended = 0;
-    int previous_bytes_read = 0;
+    ssize_t total =0;
     int parse_result;
-    size_t bytes_message_read = 0;
     char* endpos;
+    int header_end = 0;
 
-    while(!end_header && bytes_message_read < MAX_HEADER_SIZE){
-        if (previous_bytes_read==0){
-            bytes_read = tcp_read(*c_socket, rcvbuf + bytes_message_read, MAX_HEADER_SIZE );
-            if (bytes_read < 0) {
-                perror("Failed to read from socket");
-                close(*c_socket);
-                free(rcvbuf);
-                rcvbuf= NULL;
-                return &our_ERR_IO;
-            }
-            if ((endpos = strstr(rcvbuf + bytes_message_read, HTTP_HDR_END_DELIM))!=NULL && endpos<rcvbuf + bytes_message_read+bytes_read) {
-                end_header = 1;
-                bytes_read = endpos - rcvbuf - bytes_message_read + strlen(HTTP_HDR_END_DELIM);
-                strncpy(nxt_message_buf, endpos + strlen(HTTP_HDR_END_DELIM), MAX_HEADER_SIZE-bytes_read);
-                previous_bytes_read = MAX_HEADER_SIZE-bytes_read;
-            }
+
+    while(!end_header && total < MAX_HEADER_SIZE){
+        bytes_read = tcp_read(*c_socket, rcvbuf + total, MAX_HEADER_SIZE  -total - 1);
+        if (bytes_read < 0) {
+            close(*c_socket);
+            free(rcvbuf);
+            rcvbuf= NULL;
         }
-        else{
-            strncpy(rcvbuf, nxt_message_buf, MAX_HEADER_SIZE);
-            previous_bytes_read = 0;
+        total += bytes_read;
+
+        if ((endpos = strstr(rcvbuf , HTTP_HDR_END_DELIM))!=NULL && endpos<rcvbuf + total + bytes_read){
+            end_header = 1;
+            header_end = endpos - rcvbuf - total + strlen(HTTP_HDR_END_DELIM);
         }
 
-
-        parse_result = http_parse_message(rcvbuf + bytes_message_read, bytes_read, &msg, &content_length);
+        parse_result = http_parse_message(rcvbuf , total, &msg, &content_length);
         if (parse_result < 0) {
-            perror("Failed to parse message");
             close(*c_socket);
             free(rcvbuf);
             rcvbuf=NULL;
-            return (void*)(intptr_t)parse_result;
+
         }
-        if (parse_result == 0 && !extended && content_length > 0 && bytes_read <content_length) {
-                rcvbuf = realloc(rcvbuf, MAX_HEADER_SIZE + content_length);
-                bytes_message_read += bytes_read;
-                if (rcvbuf == NULL) {
-                    perror("Failed to realloc buffer");
-                    close(*c_socket);
-                    free(rcvbuf);
-                    return &our_ERR_OUT_OF_MEMORY;
-                }
-                extended = 1;
+        if (parse_result == 0 && !extended && content_length > 0 && total - header_end <content_length) {
+            char* new_buff = realloc(rcvbuf, MAX_HEADER_SIZE + content_length);
+            total+= bytes_read;
+            if (rcvbuf == NULL) {
+                perror("Failed to realloc buffer");
+                close(*c_socket);
+                free(rcvbuf);
+                rcvbuf=NULL;
+            }
+            rcvbuf = new_buff;
+            extended = 1;
 
         }
         else if (parse_result > 0) {
             if (cb) {
                 cb(&msg, *c_socket);
+                memset(&msg, 0, sizeof(msg));
+                total = 0;
+                content_length = 0;
+                extended = 0;
+                header_end = 0;
+
             }
-            memset(rcvbuf, 0, MAX_HEADER_SIZE  );
-            memset(&msg, 0, sizeof(msg));
-            bytes_read = 0;
-            bytes_message_read = 0;
-            content_length = 0;
-            end_header = 0;
+            else{
+                close(*c_socket);
+                free(rcvbuf);
+                rcvbuf=NULL;
+
+            }
+
+
         }
     }
-
 
     close(*c_socket);
     free(rcvbuf);
@@ -145,13 +139,11 @@ void http_close(void)
  * Receive content
  */
 int http_receive(void) {
-
     int client_socket = tcp_accept(passive_socket);
     if (client_socket < 0) {
         close(passive_socket);
         return ERR_IO;
     }
-
     handle_connection((void*)&client_socket);
 
     return ERR_NONE;
