@@ -59,9 +59,6 @@ printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
 int do_list_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
-    if (argc ==0) {
-        return ERR_IO;
-    }
     if (argc != 1) {
         return ERR_INVALID_COMMAND;
     }
@@ -88,10 +85,7 @@ int do_list_cmd(int argc, char** argv)
 int do_create_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
-    // Need at least imgfs_filename so argc must be greater than 0
-    if (argc ==0) {
-        return ERR_NOT_ENOUGH_ARGUMENTS;
-    }
+
 
     struct imgfs_file file;
     memset(&file,0,sizeof(struct imgfs_file));
