@@ -17,7 +17,9 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file)
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(img_id);
 
-    int img_found = ERR_IMAGE_NOT_FOUND;
+
+
+    int img_found = -1;
     uint32_t i = 0;
     uint32_t j = 0;
     // Find image reference in the metadata

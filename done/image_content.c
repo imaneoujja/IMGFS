@@ -25,11 +25,11 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
 
-    if (index >= imgfs_file->header.max_files || index<0 || imgfs_file->metadata[index].is_valid == 0) {
+    if (index >= imgfs_file->header.max_files || imgfs_file->metadata[index].is_valid == 0) {
         return ERR_INVALID_IMGID;
     }
     if (resolution != THUMB_RES && resolution != SMALL_RES && resolution != ORIG_RES) {
-        return ERR_INVALID_ARGUMENT;
+        return ERR_RESOLUTIONS;
     }
 
     // If the requested image already exists in the corresponding resolution, do nothing;
@@ -69,27 +69,16 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
 
     // Resize the image to the requested resolution
     VipsImage *resized_image = NULL;
-    if (resolution == THUMB_RES) {
-        // Resize to thumbnail resolution
-        if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[2*THUMB_RES], "height",
-                                 imgfs_file->header.resized_res[(2*THUMB_RES) + 1],NULL) != ERR_NONE) {
-            freeMemory(buffer);
-            g_object_unref(original_image);
-            return ERR_IMGLIB;
-        }
-    } else {
-        // Resize to small resolution
-        if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[2*SMALL_RES], "height",
-                                 imgfs_file->header.resized_res[(2*SMALL_RES) + 1],NULL)!= ERR_NONE) {
-            freeMemory(buffer);
-            g_object_unref(original_image);
-            return ERR_IMGLIB;
-        }
+    if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[2*resolution], "height",
+                            imgfs_file->header.resized_res[(2*resolution) + 1],NULL) != ERR_NONE) {
+        freeMemory(buffer);
+        g_object_unref(original_image);
+        return ERR_IMGLIB;
     }
 
     // Save the resized image to a buffer
     unsigned char *buffer2 = NULL;
-    uint32_t buffer_size = 0;
+    size_t buffer_size = 0;
 
     if (vips_jpegsave_buffer(resized_image, (void**)&buffer2, (size_t *)&buffer_size, NULL) != 0) {
         freeMemory(buffer);

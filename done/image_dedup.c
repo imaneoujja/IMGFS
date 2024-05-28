@@ -31,7 +31,7 @@ int do_name_and_content_dedup(struct imgfs_file* imgfs_file, uint32_t index)
         // Check that image is valid, and it is not the same as the one at position index
         if (imgfs_file->metadata[i].is_valid && i!=index) {
             // Image ID should be unique for each index
-            if (strncmp(imgfs_file->metadata[i].img_id, image_i->img_id, 127) == 0) {
+            if (strncmp(imgfs_file->metadata[i].img_id, image_i->img_id, MAX_IMG_ID) == 0) {
                 return ERR_DUPLICATE_ID;
             }
             // Same SHA is equivalent to same image content
