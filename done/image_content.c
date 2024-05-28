@@ -5,6 +5,11 @@
 #include <vips/vips.h>
 #include <stdlib.h>
 
+// Helper function to free memory
+void freeMemory(unsigned char* buffer) {
+    free(buffer);
+    buffer = NULL;
+}
 
 /**
  * @brief Lazily resizes an image to the requested resolution.
@@ -42,25 +47,21 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     VipsImage *original_image;
     unsigned char *buffer = malloc(imgfs_file->metadata[index].size[ORIG_RES]);
     if (buffer == NULL) {
-        free(buffer);
-        buffer = NULL;
+        freeMemory(buffer);
         return ERR_OUT_OF_MEMORY;
     }
     //Seek offset at which image is stored
     if (fseek(imgfs_file->file,(long)imgfs_file->metadata[index].offset[ORIG_RES],SEEK_SET) != ERR_NONE) {
-        free(buffer);
-        buffer = NULL;
+        freeMemory(buffer);
         return ERR_IO;
     }
     if (fread(buffer,imgfs_file->metadata[index].size[ORIG_RES],1,imgfs_file->file) != 1) {
-        free(buffer);
-        buffer = NULL;
+        freeMemory(buffer);
         return ERR_IO;
     }
     //Create VipsImage from buffer
     if (vips_jpegload_buffer(buffer,imgfs_file->metadata[index].size[ORIG_RES],&original_image, NULL)!=ERR_NONE) {
-        free(buffer);
-        buffer = NULL;
+        freeMemory(buffer);
         return ERR_IO;
     };
 
@@ -72,8 +73,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
         // Resize to thumbnail resolution
         if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[2*THUMB_RES], "height",
                                  imgfs_file->header.resized_res[(2*THUMB_RES) + 1],NULL) != ERR_NONE) {
-            free(buffer);
-            buffer = NULL;
+            freeMemory(buffer);
             g_object_unref(original_image);
             return ERR_IMGLIB;
         }
@@ -81,8 +81,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
         // Resize to small resolution
         if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[2*SMALL_RES], "height",
                                  imgfs_file->header.resized_res[(2*SMALL_RES) + 1],NULL)!= ERR_NONE) {
-            free(buffer);
-            buffer = NULL;
+            freeMemory(buffer);
             g_object_unref(original_image);
             return ERR_IMGLIB;
         }
@@ -93,8 +92,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     uint32_t buffer_size = 0;
 
     if (vips_jpegsave_buffer(resized_image, (void**)&buffer2, (size_t *)&buffer_size, NULL) != 0) {
-        free(buffer);
-        buffer = NULL;
+        freeMemory(buffer);
         g_object_unref(original_image);
         g_object_unref(resized_image);
         return ERR_IMGLIB;
@@ -103,8 +101,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     // Clean up resources
     g_object_unref(original_image);
     g_object_unref(resized_image);
-    free(buffer);
-    buffer = NULL;
+    freeMemory(buffer);
 
     // Append the buffer to the end of imgFS file
     if (fseek(imgfs_file->file, 0, SEEK_END) != ERR_NONE) {
@@ -114,13 +111,11 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     imgfs_file->metadata[index].size[resolution] = buffer_size;
     imgfs_file->metadata[index].offset[resolution] = (uint64_t) ftell(imgfs_file->file);
     if (fwrite(buffer2, buffer_size, 1, imgfs_file->file) != 1) {
-        g_free(buffer2);
-        buffer2 = NULL;
+        freeMemory(buffer2);
         return ERR_IO;
     }
 
-    g_free(buffer2);
-    buffer2 = NULL;
+    freeMemory(buffer2);
 
     if (fseek(imgfs_file->file, (long)(sizeof(struct imgfs_header) + (index * sizeof(struct img_metadata))), SEEK_SET) != 0) {
         return ERR_IO;
@@ -132,6 +127,8 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
 
     return ERR_NONE;
 }
+
+
 
 int get_resolution(uint32_t *height, uint32_t *width,
                    const char *image_buffer, size_t image_size) {

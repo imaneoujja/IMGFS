@@ -24,19 +24,19 @@ int do_create(const char* imgfs_filename, struct imgfs_file* imgfs_file)
     if (filePointer== NULL) {
         return ERR_IO;
     }
-    // Write to disk the header
-    imgfs_file->file= filePointer;
-    size_t bytes_w = fwrite(&imgfs_file->header, sizeof(struct imgfs_header),  1,filePointer);
-    if (bytes_w != 1) {
-        do_close(imgfs_file);
-        return ERR_IO;
-    }
     // Allocate sufficient space for the maximum possible number of entries in metadata
     uint32_t num_files = imgfs_file->header.max_files;
     imgfs_file->metadata = calloc(num_files,sizeof(struct img_metadata));
     if (imgfs_file->metadata == NULL) {
         do_close(imgfs_file);
         return ERR_OUT_OF_MEMORY;
+    }
+    // Write to disk the header
+    imgfs_file->file= filePointer;
+    size_t bytes_w = fwrite(&imgfs_file->header, sizeof(struct imgfs_header),  1,filePointer);
+    if (bytes_w != 1) {
+        do_close(imgfs_file);
+        return ERR_IO;
     }
     //Write metadata to disk
     bytes_w += fwrite(imgfs_file->metadata, sizeof(struct img_metadata),num_files,filePointer);

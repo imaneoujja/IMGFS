@@ -39,6 +39,7 @@ int do_name_and_content_dedup(struct imgfs_file* imgfs_file, uint32_t index)
                 for (int z = 0; z < NB_RES; z++) {
                     // Modify the metadata at the index position, to reference the attributes of the copy found
                     image_i->offset[z] = imgfs_file->metadata[i].offset[z];
+                    image_i->size[z] = imgfs_file->metadata[i].size[z];
                 }
                 hasDuplicate = 1;
             }

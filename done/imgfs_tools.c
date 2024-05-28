@@ -99,14 +99,10 @@ int do_open(const char* imgfs_filename,
     }
 
     // Read the contents of the metadata
-    int i = 0;
-    while (i < (int)(imgfs_file->header.max_files)) {
-        size_t read = fread(&imgfs_file->metadata[i], sizeof(struct img_metadata), 1, imgfs_file->file);
-        if (read != 1) {
-            do_close(imgfs_file);
-            return ERR_IO;
-        }
-        i++;
+    size_t read = fread(imgfs_file->metadata, sizeof(struct img_metadata), imgfs_file->header.max_files, imgfs_file->file);
+    if (read != imgfs_file->header.max_files) {
+        do_close(imgfs_file);
+        return ERR_IO;
     }
 
     // All good

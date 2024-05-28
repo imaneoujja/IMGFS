@@ -18,12 +18,17 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file)
     M_REQUIRE_NON_NULL(img_id);
 
     int img_found = ERR_IMAGE_NOT_FOUND;
-
+    uint32_t i = 0;
+    uint32_t j = 0;
     // Find image reference in the metadata
-    for (int i = 0; i < (int)imgfs_file->header.max_files; ++i) {
-        if (imgfs_file->metadata[i].is_valid == NON_EMPTY && strcmp(imgfs_file->metadata[i].img_id, img_id) == 0) {
-            img_found = i;
-            break;
+    while (j<imgfs_file->header.nb_files && i < imgfs_file->header.max_files) {
+        ++i;
+        if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
+            if (strncmp(img_id, imgfs_file->metadata[i].img_id, IMG_ID_SIZE) == 0) {
+                img_found = i;
+                break;
+            }
+            ++j;
         }
     }
 
