@@ -1,7 +1,8 @@
 #include "imgfs.h"
-#include "util.h"
-#include <stdio.h>         // for printf
-#include <string.h>        // for strcmp
+#include <stdio.h>
+#include <string.h>
+#include <json-c/json.h>
+
 
 /**
  * @brief Displays (on stdout) imgFS metadata.
@@ -24,13 +25,14 @@ int do_list(const struct imgfs_file *imgfs_file,
         // Print contents of the header
         print_header(&(imgfs_file->header));
         int valid_images = 0;
-
+        int i = 0;
         // Print metadata of all valid images
-        for (int i = 0; i < (int)(imgfs_file->header.max_files); i++) {
+        while (i < (int)(imgfs_file->header.max_files) && valid_images < (int)(imgfs_file->header.nb_files)) {
             if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
                 print_metadata(&(imgfs_file->metadata[i]));
                 valid_images++;
             }
+            i++;
         }
 
         // Or when no valid images
@@ -39,11 +41,63 @@ int do_list(const struct imgfs_file *imgfs_file,
         }
     } else if (output_mode == JSON) {
         M_REQUIRE_NON_NULL(json);
-        TO_BE_IMPLEMENTED();
+        // Create a JSON object to store imgids
+        struct json_object* obj = json_object_new_object();
+        if (obj == NULL) {
+            return ERR_RUNTIME;
+        }
+        // Create an array to store imgids
+        struct json_object* imgids = json_object_new_array_ext(imgfs_file->header.nb_files);
+        if (imgids == NULL) {
+            json_object_put(obj);
+            return ERR_RUNTIME;
+        }
+        // Add all valid imgids to the array
+        int i = 0;
+        int valid_images = 0;
+        while (i < (int)(imgfs_file->header.max_files) && valid_images < (int)(imgfs_file->header.nb_files)) {
+            if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
+                struct json_object* imgid = json_object_new_string(imgfs_file->metadata[i].img_id);
+                if (imgid == NULL) {
+                    json_object_put(obj);
+                    json_object_put(imgids);
+                    return ERR_RUNTIME;
+                }
+                int err = json_object_array_add(imgids, imgid);
+                if (err != 0) {
+                    json_object_put(obj);
+                    json_object_put(imgids);
+                    return ERR_RUNTIME;
+                }
+                valid_images++;
+            }
+            i++;
+        }
+        // Add the array to the JSON object
+        int err2 = json_object_object_add(obj, "Images", imgids);
+        if (err2 != 0) {
+            json_object_put(obj);
+            json_object_put(imgids);
+            return ERR_RUNTIME;
+        }
+        // Convert the JSON object to a string
+        const char* jsonstring = json_object_to_json_string(obj);
+        *json = (const char*)malloc(strlen(jsonstring) + 1);
+        if (*json == NULL) {
+            json_object_put(obj);
+            return ERR_OUT_OF_MEMORY;
+        }
+
+        strcpy(*json, jsonstring);
+        // Free the JSON object
+        json_object_put(obj);
+        return ERR_NONE;
+
     } else {
         // Output mode should only be JSON or STDOUT
         printf("Invalid output mode\n");
+        return ERR_INVALID_ARGUMENT;
     }
 
-    return ERR_NONE;
+
 }

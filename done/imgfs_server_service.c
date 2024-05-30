@@ -101,18 +101,67 @@ static int reply_302_msg(int connection)
 /************************
  * Simple handling of http message. TO BE UPDATED WEEK 13
  ******************** */
-int handle_http_message(struct http_message* msg, int connection)
+int handle_http_message(struct http_message* msg, int sockfd)
 {
-    M_REQUIRE_NON_NULL(msg);
-    debug_printf("handle_http_message() on connection %d. URI: %.*s\n",
-                 connection,
-                 (int) msg->uri.len, msg->uri.ptr);
-    if (http_match_uri(msg, URI_ROOT "/list")      ||
-        (http_match_uri(msg, URI_ROOT "/insert")
-         && http_match_verb(&msg->method, "POST")) ||
-        http_match_uri(msg, URI_ROOT "/read")      ||
-        http_match_uri(msg, URI_ROOT "/delete"))
-        return reply_302_msg(connection);
-    else
-        return reply_error_msg(connection, ERR_INVALID_COMMAND);
+    M_REQUIRE_NON_NULL(msg);    debug_printf("handle_http_message() on connection %d. URI: %.*s\n",
+                 sockfd,                 (int) msg->uri.len, msg->uri.val);
+    if (http_match_uri(msg, URI_ROOT "/list") ){        return handle_list_call(sockfd);
+    }        if(   (http_match_uri(msg, URI_ROOT "/insert")&& http_match_verb(&msg->method, "POST")) ){
+        return handle_insert_call(msg, sockfd);         }
+    if(http_match_uri(msg, URI_ROOT "/read")){        return handle_read_call(msg,sockfd);
+    }         if(   http_match_uri(msg, URI_ROOT "/delete")){
+        return handle_delete_call(msg,sockfd);    }
+        return reply_error_msg(sockfd, ERR_INVALID_COMMAND);
 }
+
+
+int handle_list_call( int connection){   
+    enum do_list_mode output_mode = JSON;
+    char* json;
+    // List using the do_list function
+    int error = do_list(&fs_file, output_mode, &json);
+    if (error != ERR_NONE) {
+        return reply_error_msg(connection, error);
+    }
+    int result = http_reply(connection, "200 OK", "Content-Type: application/json\r\n", json, strlen(json));
+    free(json); // Make sure to free the allocated JSON string
+    return result;
+}
+
+
+int handle_delete_call(struct http_message *msg, int sockfd) { 
+    char img_id[MAX_IMG_ID];     if (http_get_var(&msg->uri, "img_id", img_id, sizeof(img_id)) <= 0) { 
+        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT); 
+    }  
+    int ret = do_delete("imgfs_file.imgfs", img_id);     if (ret != ERR_NONE) { 
+        return reply_error_msg(sockfd, ret);     } 
+     return reply_302_msg(sockfd); 
+} 
+
+int handle_read_call(struct http_message *msg, int sockfd) { 
+    char img_id[MAX_IMG_ID + 1] = {0};    char res[6] = {0};
+    if (http_get_var(&msg->uri, "img_id", img_id, MAX_IMG_ID) <= 0) {
+        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT);    }
+    if (http_get_var(&msg->uri, "res", res, sizeof(res) - 1) <= 0) {
+        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT);    }
+    char *image_buffer = NULL;
+    uint32_t image_size = 0;
+    int error = do_read(img_id, resolution_atoi(res), &image_buffer, &image_size, &fs_file);    if (error != ERR_NONE) {
+        return reply_error_msg(sockfd, error);    }
+    int result = http_reply(sockfd, HTTP_OK, "Content-Type: image/jpeg\r\n", image_buffer, image_size);
+    free(image_buffer);  // Make sure to free the image buffer after use    return result;
+
+} 
+int handle_insert_call(struct http_message *msg, int sockfd) { 
+    char img_id[MAX_IMG_ID];     if (http_get_var(&msg->uri, "name", img_id, sizeof(img_id)) <= 0) { 
+        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT); 
+    }  
+    char *image_buffer = malloc(msg->body.len);     if (!image_buffer) { 
+        return reply_error_msg(sockfd, ERR_OUT_OF_MEMORY);     } 
+    memcpy(image_buffer, msg->body.val, msg->body.len);  
+    int ret = do_insert("imgfs_file.imgfs", img_id, image_buffer, msg->body.len);     free(image_buffer); 
+    if (ret != ERR_NONE) { 
+        return reply_error_msg(sockfd, ret); 
+    }  
+    return reply_302_msg(sockfd); }
+

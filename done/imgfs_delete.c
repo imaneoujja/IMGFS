@@ -35,7 +35,7 @@ int do_delete(const char* img_id, struct imgfs_file* imgfs_file)
     }
 
     // Image reference does not exist
-    if (img_found == ERR_IMAGE_NOT_FOUND) return ERR_IMAGE_NOT_FOUND;
+    if (img_found == -1) return ERR_IMAGE_NOT_FOUND;
 
     // Image deleted by invalidating the reference
     imgfs_file->metadata[img_found].is_valid = EMPTY;

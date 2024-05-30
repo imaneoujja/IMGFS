@@ -85,6 +85,7 @@ int do_list_cmd(int argc, char** argv)
 int do_create_cmd(int argc, char** argv)
 {
     M_REQUIRE_NON_NULL(argv);
+    if (!argc) return ERR_NOT_ENOUGH_ARGUMENTS;
 
 
     struct imgfs_file file;

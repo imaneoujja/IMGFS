@@ -11,12 +11,11 @@
 
 # Note: builds with address sanitizer by default
 
-TEST_DIR = $(PWD)/../provided/tests
+TEST_DIR = $(PWD)/tests
 
 ## You can change the tag to run week07, week08, etc.
 IMAGE := chappeli/cs202-feedback:latest
-CFLAGS	 += $(shell pkg-config --cflags vips)
-LDLIBS	 += $(shell pkg-config --libs vips)
+
 #########################################################################
 # DO NOT EDIT BELOW THIS LINE
 #
@@ -39,7 +38,21 @@ CPPFLAGS += -fsanitize=address
 LDFLAGS  += -fsanitize=address
 LDLIBS   += -fsanitize=address
 
-CFLAGS   += -DWEEK=12
+# Add options for the compiler to include the library's headers
+CFLAGS += $(shell pkg-config vips --cflags)
+
+# Add the library to the linker
+LDLIBS += $(shell pkg-config vips --libs)
+
+# Add options for the compiler to include the library's headers
+CFLAGS += -I/usr/include/json-c
+
+# Add the library to the linker
+LDLIBS += -ljson-c
+
+#ifdef CS212_STAFF
+CPPFLAGS += -DCS212_STAFF -DWEEK=14
+#endif
 
 ifdef DEBUG
 # add the debug flag, may need to comment this line when doing make feedback
@@ -67,7 +80,7 @@ tcp: tcp-test-client tcp-test-server
 tcp-test-client: util.o tcp-test-client.o socket_layer.o
 tcp-test-server: util.o tcp-test-server.o socket_layer.o
 
-http-test-server: http-test-server.o http_net.o http_prot.o socket_layer.o error.o util.o
+http-test-server: $(OBJS) http-test-server.o http_net.o http_prot.o socket_layer.o error.o util.o imgfs_tools.o imgfs_server_service.o
 
 # Computes the valid targets for `all`
 TARGETS = imgfscmd
@@ -145,6 +158,7 @@ end2end-tests: $(TARGETS)
 	$(call e2e_test,week07.robot)
 	$(call e2e_test,week08.robot)
 	$(call e2e_test,week10.robot)
+	$(call e2e_test,week13.robot)
 
 check: end2end-tests unit-tests
 
