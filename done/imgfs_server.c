@@ -11,6 +11,8 @@
 #include "socket_layer.h"
 #include "http_net.h"
 #include "imgfs_server_service.h"
+#include <vips/vips.h>
+
 
 #include <string.h>
 #include <signal.h>
@@ -44,16 +46,21 @@ static void set_signal_handler(void)
 
 int main (int argc, char *argv[])
 {
+
     int err = server_startup(argc, argv);
     if (err != ERR_NONE) {
         return err;
     }
+    if (VIPS_INIT(argv[0])) {
+        return ERR_IMGLIB;
+    }
+    set_signal_handler();
 
     while ((err = http_receive()) == ERR_NONE);
 
     fprintf(stderr, "http_receive() failed\n");
     fprintf(stderr, "%s\n", ERR_MSG(err));
-    set_signal_handler();
+    vips_shutdown();
 
     return ERR_NONE;
 }

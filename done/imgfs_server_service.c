@@ -105,6 +105,10 @@ int handle_http_message(struct http_message* msg, int sockfd)
 {
     M_REQUIRE_NON_NULL(msg);    debug_printf("handle_http_message() on connection %d. URI: %.*s\n",
                  sockfd,                 (int) msg->uri.len, msg->uri.val);
+    if (http_match_verb(&msg->uri, "/") || http_match_uri(msg, "/index.html")) {
+        return http_serve_file(sockfd, BASE_FILE);
+    }
+
     if (http_match_uri(msg, URI_ROOT "/list") ){        return handle_list_call(sockfd);
     }        if(   (http_match_uri(msg, URI_ROOT "/insert")&& http_match_verb(&msg->method, "POST")) ){
         return handle_insert_call(msg, sockfd);         }
@@ -130,8 +134,10 @@ int handle_list_call( int connection){
 
 
 int handle_delete_call(struct http_message *msg, int sockfd) { 
-    char img_id[MAX_IMG_ID];     if (http_get_var(&msg->uri, "img_id", img_id, sizeof(img_id)) <= 0) { 
-        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT); 
+    char img_id[MAX_IMG_ID];  
+    int err = http_get_var(&msg->uri, "img_id", img_id, sizeof(img_id)) ; 
+    if (err<= 0) { 
+        return reply_error_msg(sockfd, err); 
     }  
     int ret = do_delete("imgfs_file.imgfs", img_id);     if (ret != ERR_NONE) { 
         return reply_error_msg(sockfd, ret);     } 
@@ -139,24 +145,31 @@ int handle_delete_call(struct http_message *msg, int sockfd) {
 } 
 
 int handle_read_call(struct http_message *msg, int sockfd) { 
-    char img_id[MAX_IMG_ID + 1] = {0};    char res[6] = {0};
-    if (http_get_var(&msg->uri, "img_id", img_id, MAX_IMG_ID) <= 0) {
-        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT);    }
-    if (http_get_var(&msg->uri, "res", res, sizeof(res) - 1) <= 0) {
+    char img_id[MAX_IMG_ID + 1] = {0};    
+    char res[6] = {0};
+    int err;
+    if (err = http_get_var(&msg->uri, "img_id", img_id, MAX_IMG_ID)<= 0) {
+        return reply_error_msg(sockfd, err);    }
+    if (http_get_var(&msg->uri, "res", res, sizeof(res) - 1)<=0) {
         return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT);    }
     char *image_buffer = NULL;
     uint32_t image_size = 0;
-    int error = do_read(img_id, resolution_atoi(res), &image_buffer, &image_size, &fs_file);    if (error != ERR_NONE) {
+    int error = do_read(img_id, resolution_atoi(res), &image_buffer, &image_size, &fs_file);    
+    if (error != ERR_NONE) {
         return reply_error_msg(sockfd, error);    }
     int result = http_reply(sockfd, HTTP_OK, "Content-Type: image/jpeg\r\n", image_buffer, image_size);
-    free(image_buffer);  // Make sure to free the image buffer after use    return result;
+    free(image_buffer);  // Make sure to free the image buffer after use    
+    return result;
 
 } 
 int handle_insert_call(struct http_message *msg, int sockfd) { 
-    char img_id[MAX_IMG_ID];     if (http_get_var(&msg->uri, "name", img_id, sizeof(img_id)) <= 0) { 
-        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT); 
+    char img_id[MAX_IMG_ID];    
+    int err = http_get_var(&msg->uri, "name", img_id, sizeof(img_id));
+     if (err<=0) { 
+        return reply_error_msg(sockfd, err); 
     }  
-    char *image_buffer = malloc(msg->body.len);     if (!image_buffer) { 
+    char *image_buffer = malloc(msg->body.len);    
+     if (!image_buffer) { 
         return reply_error_msg(sockfd, ERR_OUT_OF_MEMORY);     } 
     memcpy(image_buffer, msg->body.val, msg->body.len);  
     int ret = do_insert("imgfs_file.imgfs", img_id, image_buffer, msg->body.len);     free(image_buffer); 

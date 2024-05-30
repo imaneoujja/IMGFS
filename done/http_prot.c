@@ -50,7 +50,7 @@ int http_get_var(const struct http_string* url, const char* name, char* out, siz
     // Searching for the parameter in the URL
     const char* start = strstr(url->val, param);
     if (start == NULL) {
-        return 0;
+        return ERR_NOT_ENOUGH_ARGUMENTS;
     }
     start += strlen(param);
     // Look if there is any '&' somewhere after that string and if yes consider the position of this '&' as the end of the value

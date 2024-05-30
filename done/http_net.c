@@ -32,79 +32,83 @@ MK_OUR_ERR(ERR_IO);
 
 static void* handle_connection(void *arg) { 
    if (arg == NULL) return &our_ERR_INVALID_ARGUMENT; 
- 
-    char* rcvbuf = calloc(1, MAX_HEADER_SIZE ); 
-    if (rcvbuf == NULL) return &our_ERR_OUT_OF_MEMORY; 
-    int end_header = 0; 
-    int* c_socket = (intptr_t)arg; 
-    ssize_t bytes_read = 0; 
-    struct http_message msg; 
-    memset(&msg, 0, sizeof(msg)); 
-    int content_length = 0; 
-    int extended = 0; 
-    ssize_t total =0; 
-    int parse_result; 
-    char* endpos; 
- 
- 
-    while(!end_header && total < MAX_HEADER_SIZE){ 
-        bytes_read = tcp_read(*c_socket, rcvbuf + total, MAX_HEADER_SIZE  -total - 1); 
-        if (bytes_read < 0) { 
-            close(*c_socket); 
-            free(rcvbuf); 
-            rcvbuf= NULL; 
-        } 
-        total += bytes_read; 
- 
-        if ((endpos = strstr(rcvbuf , HTTP_HDR_END_DELIM))!=NULL && endpos<rcvbuf + total + bytes_read){ 
-            end_header = 1; 
-            bytes_read = endpos - rcvbuf - total + strlen(HTTP_HDR_END_DELIM); 
-        } 
- 
-        parse_result = http_parse_message(rcvbuf , total, &msg, &content_length); 
-        if (parse_result < 0) { 
-            close(*c_socket); 
-            free(rcvbuf); 
-            rcvbuf=NULL; 
- 
-        } 
-        if (parse_result == 0 && !extended && content_length > 0 && total <content_length) { 
-                char* new_buff = realloc(rcvbuf, MAX_HEADER_SIZE + content_length); 
-                total+= bytes_read; 
-                if (rcvbuf == NULL) { 
-                    perror("Failed to realloc buffer"); 
-                    close(*c_socket); 
-                    free(rcvbuf); 
-                    rcvbuf=NULL; 
-                } 
-                rcvbuf = new_buff; 
-                extended = 1; 
- 
-        } 
-        else if (parse_result > 0) { 
-            if (cb) { 
-                cb(&msg, *c_socket); 
-                memset(&msg, 0, sizeof(msg)); 
-                total = 0; 
-                content_length = 0; 
-                extended = 0; 
- 
-                } 
-            else{ 
-                close(*c_socket); 
-                free(rcvbuf); 
-                rcvbuf=NULL; 
- 
-            } 
- 
- 
-        } 
-    } 
- 
-    close(*c_socket); 
-    free(rcvbuf); 
-    rcvbuf = NULL; 
-    return &our_ERR_NONE; 
+       int client_fd = *(int *)arg;
+
+
+    // buffer for the http header - used allocation so that I can assign new value to it
+    char *rcvbuf = malloc(MAX_HEADER_SIZE);
+    if (rcvbuf == NULL) return &our_ERR_OUT_OF_MEMORY;
+
+    int read_bytes = 0;
+    char *header_end = NULL;
+    int content_len = 0; // ZAC: explicitly initialized content length to 0.
+    int extended = 0;
+
+    struct http_message message;
+
+    do {
+        ssize_t num_bytes_read = tcp_read(client_fd,
+                                          rcvbuf + read_bytes,
+                                          MAX_HEADER_SIZE - read_bytes - 1);
+        if (num_bytes_read <= 0) {
+            free(rcvbuf);
+            rcvbuf = NULL;
+            close(client_fd);
+          
+            return &our_ERR_IO;
+        }
+        read_bytes += (int)num_bytes_read;
+        rcvbuf[read_bytes] = '\0'; // null terminate string for safety
+
+        // search for the header delimiter
+        header_end = strstr(rcvbuf, HTTP_HDR_END_DELIM);  // "\r\n\r\n"
+
+        //=============================================WEEK 12==========================================================
+
+        int ret_parsed_mess = http_parse_message(rcvbuf,read_bytes,&message, &content_len);
+        if (ret_parsed_mess < 0) {
+            free(rcvbuf); // parse_message returns negative if an error occurred (http_prot.h)
+            rcvbuf = NULL;
+            close(client_fd);
+
+            return &our_ERR_IO;
+        } else if (ret_parsed_mess == 0) { // partial treatment (see http_prot.h)
+            if (!extended && content_len > 0 && read_bytes < content_len) {
+                char *new_buf = realloc(rcvbuf, MAX_HEADER_SIZE + content_len);
+                if (!new_buf) {
+                    free(rcvbuf);
+                    rcvbuf = NULL;
+                    close(client_fd);
+
+                    return &our_ERR_OUT_OF_MEMORY;
+                }
+                rcvbuf = new_buf;
+                extended = 1;
+            }
+        } else { // case where the message was fully received and parsed
+            int callback_result = cb(&message, client_fd);
+            if (callback_result < 0) {
+                free(rcvbuf);
+                rcvbuf = NULL;
+                close(client_fd);
+              
+                return &our_ERR_IO;
+            } else {
+                read_bytes = 0;
+                content_len = 0;
+                extended = 0;
+                memset(rcvbuf, 0, MAX_HEADER_SIZE);
+            }
+        }
+    } while (!header_end && read_bytes < MAX_HEADER_SIZE);  // do this until delimiter is found, or buffer is full
+
+    free(rcvbuf);
+    rcvbuf = NULL;
+    close(client_fd);
+
+
+  
+    return &our_ERR_NONE;
 }
 
 

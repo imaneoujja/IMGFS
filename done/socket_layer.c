@@ -18,6 +18,13 @@ int tcp_server_init(uint16_t port){
         perror("Error creating socket");
         return ERR_IO;
     }
+    int optval = 1;
+    if (setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+        perror("Error setting SO_REUSEADDR");
+        close(sock_fd);
+        return ERR_IO;
+    }
+
     // Create the server address
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
@@ -31,7 +38,7 @@ int tcp_server_init(uint16_t port){
         return ERR_IO;
     }
     // Listen for incoming connections
-    if (listen(sock_fd, 10)!=ERR_NONE){
+    if (listen(sock_fd, SOMAXCONN)!=ERR_NONE){
         perror("Error listening on socket");
         close(sock_fd);
         return ERR_IO;
