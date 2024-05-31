@@ -44,11 +44,13 @@ int do_list(const struct imgfs_file *imgfs_file,
         // Create a JSON object to store imgids
         struct json_object* obj = json_object_new_object();
         if (obj == NULL) {
+            perror("json_object_new_object");
             return ERR_RUNTIME;
         }
         // Create an array to store imgids
         struct json_object* imgids = json_object_new_array_ext(imgfs_file->header.nb_files);
         if (imgids == NULL) {
+            perror("json_object_new_array_ext");
             json_object_put(obj);
             return ERR_RUNTIME;
         }
@@ -59,12 +61,14 @@ int do_list(const struct imgfs_file *imgfs_file,
             if (imgfs_file->metadata[i].is_valid == NON_EMPTY) {
                 struct json_object* imgid = json_object_new_string(imgfs_file->metadata[i].img_id);
                 if (imgid == NULL) {
+                    perror("json_object_new_string");
                     json_object_put(obj);
                     json_object_put(imgids);
                     return ERR_RUNTIME;
                 }
                 int err = json_object_array_add(imgids, imgid);
                 if (err != 0) {
+                    perror("json_object_array_add");
                     json_object_put(obj);
                     json_object_put(imgids);
                     return ERR_RUNTIME;
@@ -76,6 +80,7 @@ int do_list(const struct imgfs_file *imgfs_file,
         // Add the array to the JSON object
         int err2 = json_object_object_add(obj, "Images", imgids);
         if (err2 != 0) {
+            perror("json_object_object_add");
             json_object_put(obj);
             json_object_put(imgids);
             return ERR_RUNTIME;
@@ -84,6 +89,7 @@ int do_list(const struct imgfs_file *imgfs_file,
         const char* jsonstring = json_object_to_json_string(obj);
         *json = (const char*)malloc(strlen(jsonstring) + 1);
         if (*json == NULL) {
+            perror("malloc");
             json_object_put(obj);
             return ERR_OUT_OF_MEMORY;
         }
@@ -95,7 +101,7 @@ int do_list(const struct imgfs_file *imgfs_file,
 
     } else {
         // Output mode should only be JSON or STDOUT
-        printf("Invalid output mode\n");
+        perror("Invalid output mode\n");
         return ERR_INVALID_ARGUMENT;
     }
 

@@ -18,6 +18,7 @@ int do_insert(const char* image_buffer, size_t image_size,
     M_REQUIRE_NON_NULL(image_buffer);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
     if (imgfs_file->header.nb_files >= imgfs_file->header.max_files){
+        perror("imgfs full");
         return ERR_IMGFS_FULL;
     }
 
@@ -35,6 +36,7 @@ int do_insert(const char* image_buffer, size_t image_size,
             //Get width and height
             int error = get_resolution(&height, &width,image_buffer, image_size);
             if (error != ERR_NONE){
+                perror("get_resolution");
                 return error;
             }
             imgfs_file->metadata[i].orig_res[0] = width;
@@ -44,15 +46,18 @@ int do_insert(const char* image_buffer, size_t image_size,
             //Check whether image is already in database or img_id belongs to another image
             error = do_name_and_content_dedup(imgfs_file,i);
             if (error != ERR_NONE){
+                perror("do_name_and_content_dedup");
                 return error;
             }
             //If image is not already in database, write it at the end of file
             if (imgfs_file->metadata[i].offset[ORIG_RES] == 0){
                 if (fseek(imgfs_file->file,0,SEEK_END) != ERR_NONE){
+                    perror("fseek");
                     return ERR_IO;
                 }
                 size_t bytes_w = fwrite(image_buffer, image_size,1,imgfs_file->file);
                 if (bytes_w != 1){
+                    perror("fwrite");
                     return ERR_IO;
                 }
                 imgfs_file->metadata[i].offset[ORIG_RES] = ftell(imgfs_file->file) - image_size;
@@ -61,16 +66,20 @@ int do_insert(const char* image_buffer, size_t image_size,
             imgfs_file->header.version += 1;
             imgfs_file->header.nb_files += 1;
             if (fseek(imgfs_file->file,0,SEEK_SET) != ERR_NONE) {
+                perror("fseek");
                 return ERR_IO;
             }
             if (fwrite(&imgfs_file->header,sizeof(struct imgfs_header),1,imgfs_file->file) != 1){
+                perror("fwrite");
                 return ERR_IO;
             }
 
             if (fseek(imgfs_file->file,sizeof(struct img_metadata)*i,SEEK_CUR) != ERR_NONE) {
+                perror("fseek");
                 return ERR_IO;
             }
             if (fwrite(&imgfs_file->metadata[i], sizeof(struct img_metadata),1,imgfs_file->file) != 1){
+                perror("fwrite");
                 return ERR_IO;
             }
             return ERR_NONE;

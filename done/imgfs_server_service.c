@@ -190,8 +190,8 @@ int handle_read_call(struct http_message *msg, int sockfd) {
 
 
 int handle_insert_call(struct http_message *msg, int sockfd) {
-    char img_id[MAX_IMG_ID];
-    int err = http_get_var(&msg->uri, "name", img_id, sizeof(img_id));
+    char img_id[MAX_IMG_ID + 1];
+    int err = http_get_var(&msg->uri, "name", img_id, MAX_IMG_ID);
     if (err <= 0) {
         return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT);
     }
@@ -200,8 +200,8 @@ int handle_insert_call(struct http_message *msg, int sockfd) {
         return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
     }
 
-    char *image_buffer = malloc(msg->body.len);
-    if (!image_buffer) {
+    char *image_buffer = calloc(1,msg->body.len);
+    if (image_buffer == NULL) {
         return reply_error_msg(sockfd, ERR_OUT_OF_MEMORY);
     }
 
@@ -210,9 +210,7 @@ int handle_insert_call(struct http_message *msg, int sockfd) {
     int ret = do_insert(image_buffer, msg->body.len, img_id, &fs_file);
     free(image_buffer);
 
-    if (ret == ERR_DUPLICATE_ID) {
-        return reply_error_msg(sockfd, ERR_DUPLICATE_ID);
-    } else if (ret != ERR_NONE) {
+    if (ret != ERR_NONE) {
         return reply_error_msg(sockfd, ret);
     }
 
