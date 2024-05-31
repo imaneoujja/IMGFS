@@ -103,19 +103,25 @@ static int reply_302_msg(int connection)
  ******************** */
 int handle_http_message(struct http_message* msg, int sockfd)
 {
-    M_REQUIRE_NON_NULL(msg);    debug_printf("handle_http_message() on connection %d. URI: %.*s\n",
-                 sockfd,                 (int) msg->uri.len, msg->uri.val);
+    M_REQUIRE_NON_NULL(msg);
+    debug_printf("handle_http_message() on connection %d. URI: %.*s\n",sockfd,(int) msg->uri.len, msg->uri.val);
     if (http_match_verb(&msg->uri, "/") || http_match_uri(msg, "/index.html")) {
         return http_serve_file(sockfd, BASE_FILE);
     }
 
-    if (http_match_uri(msg, URI_ROOT "/list") ){        return handle_list_call(sockfd);
-    }        if(   (http_match_uri(msg, URI_ROOT "/insert")&& http_match_verb(&msg->method, "POST")) ){
-        return handle_insert_call(msg, sockfd);         }
-    if(http_match_uri(msg, URI_ROOT "/read")){        return handle_read_call(msg,sockfd);
-    }         if(   http_match_uri(msg, URI_ROOT "/delete")){
-        return handle_delete_call(msg,sockfd);    }
-        return reply_error_msg(sockfd, ERR_INVALID_COMMAND);
+    if (http_match_uri(msg, URI_ROOT "/list") ){
+        return handle_list_call(sockfd);
+    }
+    if(   (http_match_uri(msg, URI_ROOT "/insert")&& http_match_verb(&msg->method, "POST")) ){
+        return handle_insert_call(msg, sockfd);
+    }
+    if(http_match_uri(msg, URI_ROOT "/read")){
+        return handle_read_call(msg,sockfd);
+    }
+    if(   http_match_uri(msg, URI_ROOT "/delete")){
+        return handle_delete_call(msg,sockfd);
+    }
+    return reply_error_msg(sockfd, ERR_INVALID_COMMAND);
 }
 
 
@@ -192,11 +198,8 @@ int handle_read_call(struct http_message *msg, int sockfd) {
 int handle_insert_call(struct http_message *msg, int sockfd) {
     char img_id[MAX_IMG_ID + 1];
     int err = http_get_var(&msg->uri, "name", img_id, MAX_IMG_ID);
-    if (err <= 0) {
-        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT);
-    }
 
-    if (msg->body.len == 0) {
+    if (msg->body.len == 0 || err<=0) {
         return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
     }
 

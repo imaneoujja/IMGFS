@@ -12,12 +12,18 @@ int do_read(const char* img_id, int resolution, char** image_buffer, uint32_t* i
     M_REQUIRE_NON_NULL(image_size);
 
     // Find the image in metadata
+    int i = 0;
+    int j = 0;
     int index = -1;
-    for (uint32_t i = 0; i < imgfs_file->header.nb_files; ++i) {
-        if (imgfs_file->metadata[i].is_valid && strcmp(imgfs_file->metadata[i].img_id, img_id) == 0) {
-            index = i;
-            break;
+    while (j<imgfs_file->header.nb_files && i < imgfs_file->header.max_files) {
+        if (imgfs_file->metadata[i].is_valid) {
+            if(strcmp(imgfs_file->metadata[i].img_id, img_id) == 0){
+                index = i;
+                break;
+            }
+            j++;
         }
+        i++;
     }
 
     if (index == -1) {
