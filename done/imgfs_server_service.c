@@ -134,47 +134,89 @@ int handle_list_call( int connection){
 
 
 int handle_delete_call(struct http_message *msg, int sockfd) { 
-    char img_id[MAX_IMG_ID];  
-    int err = http_get_var(&msg->uri, "img_id", img_id, sizeof(img_id)) ; 
-    if (err<= 0) { 
-        return reply_error_msg(sockfd, err); 
-    }  
-    int ret = do_delete("imgfs_file.imgfs", img_id);     if (ret != ERR_NONE) { 
-        return reply_error_msg(sockfd, ret);     } 
-     return reply_302_msg(sockfd); 
-} 
+    char img_id[MAX_IMG_ID];
+    int err = http_get_var(&msg->uri, "img_id", img_id, sizeof(img_id));
+    if (err <= 0) {
+        return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
+    }
 
-int handle_read_call(struct http_message *msg, int sockfd) { 
-    char img_id[MAX_IMG_ID + 1] = {0};    
+    int ret = do_delete(img_id, &fs_file);
+    if (ret != ERR_NONE) {
+        return reply_error_msg(sockfd, ret);
+    }
+
+    return reply_302_msg(sockfd);
+} 
+int handle_read_call(struct http_message *msg, int sockfd) {
+    char img_id[MAX_IMG_ID + 1] = {0};
     char res[6] = {0};
     int err;
-    if (err = http_get_var(&msg->uri, "img_id", img_id, MAX_IMG_ID)<= 0) {
-        return reply_error_msg(sockfd, err);    }
-    if (http_get_var(&msg->uri, "res", res, sizeof(res) - 1)<=0) {
-        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT);    }
+    if ((err = http_get_var(&msg->uri, "img_id", img_id, MAX_IMG_ID)) <= 0) {
+        return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
+    }
+
+    // Check for res parameter
+    if ((err = http_get_var(&msg->uri, "res", res, sizeof(res))) <= 0) {
+        if (err == 0) {
+            return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
+        }
+        return reply_error_msg(sockfd, ERR_RESOLUTIONS);
+    }
+
+    // Check if the resolution is invalid
+    int resolution = resolution_atoi(res);
+    if (resolution == -1) {
+        return reply_error_msg(sockfd, ERR_RESOLUTIONS);
+    }
+
+    // Prepare to read the image
     char *image_buffer = NULL;
     uint32_t image_size = 0;
-    int error = do_read(img_id, resolution_atoi(res), &image_buffer, &image_size, &fs_file);    
-    if (error != ERR_NONE) {
-        return reply_error_msg(sockfd, error);    }
-    int result = http_reply(sockfd, HTTP_OK, "Content-Type: image/jpeg\r\n", image_buffer, image_size);
-    free(image_buffer);  // Make sure to free the image buffer after use    
-    return result;
+    int error = do_read(img_id, resolution, &image_buffer, &image_size, &fs_file);
 
-} 
-int handle_insert_call(struct http_message *msg, int sockfd) { 
-    char img_id[MAX_IMG_ID];    
+    if (error != ERR_NONE) {
+        return reply_error_msg(sockfd, error);
+    }
+
+    // Send the response with the image
+    int result = http_reply(sockfd, "200 OK", "Content-Type: image/jpeg\r\n", image_buffer, image_size);
+
+    // Free the image buffer after use
+    free(image_buffer);
+
+    return result;
+}
+
+
+
+int handle_insert_call(struct http_message *msg, int sockfd) {
+    char img_id[MAX_IMG_ID];
     int err = http_get_var(&msg->uri, "name", img_id, sizeof(img_id));
-     if (err<=0) { 
-        return reply_error_msg(sockfd, err); 
-    }  
-    char *image_buffer = malloc(msg->body.len);    
-     if (!image_buffer) { 
-        return reply_error_msg(sockfd, ERR_OUT_OF_MEMORY);     } 
-    memcpy(image_buffer, msg->body.val, msg->body.len);  
-    int ret = do_insert("imgfs_file.imgfs", img_id, image_buffer, msg->body.len);     free(image_buffer); 
-    if (ret != ERR_NONE) { 
-        return reply_error_msg(sockfd, ret); 
-    }  
-    return reply_302_msg(sockfd); }
+    if (err <= 0) {
+        return reply_error_msg(sockfd, ERR_INVALID_ARGUMENT);
+    }
+
+    if (msg->body.len == 0) {
+        return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
+    }
+
+    char *image_buffer = malloc(msg->body.len);
+    if (!image_buffer) {
+        return reply_error_msg(sockfd, ERR_OUT_OF_MEMORY);
+    }
+
+    memcpy(image_buffer, msg->body.val, msg->body.len);
+
+    int ret = do_insert(image_buffer, msg->body.len, img_id, &fs_file);
+    free(image_buffer);
+
+    if (ret == ERR_DUPLICATE_ID) {
+        return reply_error_msg(sockfd, ERR_DUPLICATE_ID);
+    } else if (ret != ERR_NONE) {
+        return reply_error_msg(sockfd, ret);
+    }
+
+    return reply_302_msg(sockfd);
+}
+
 

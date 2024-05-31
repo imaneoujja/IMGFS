@@ -38,30 +38,33 @@ int http_match_verb(const struct http_string* method, const char* verb){
  * 0 or negative return values indicate an error.
  */
 int http_get_var(const struct http_string* url, const char* name, char* out, size_t out_len){
-    M_REQUIRE_NON_NULL(url);
+   M_REQUIRE_NON_NULL(url);
     M_REQUIRE_NON_NULL(url->val);
     M_REQUIRE_NON_NULL(name);
     M_REQUIRE_NON_NULL(out);
+
     // Creating a new string with the name of the parameter and '='
     char param[strlen(name) + 2];
     strncpy(param, name, strlen(name));
-    param[strlen(name)] = '\0';
-    strncat(param, "=", 1);
+    param[strlen(name)] = '=';
+    param[strlen(name) + 1] = '\0';
+
     // Searching for the parameter in the URL
     const char* start = strstr(url->val, param);
     if (start == NULL) {
-        return ERR_NOT_ENOUGH_ARGUMENTS;
+        return 0; // Parameter not found
     }
     start += strlen(param);
+
     // Look if there is any '&' somewhere after that string and if yes consider the position of this '&' as the end of the value
     const char* end = strchr(start, '&');
-    // Otherwise consider the end of the URL as the end of the value;
     if (end == NULL) {
-        end = url->val + url->len;
+        end = url->val + url->len; // Otherwise consider the end of the URL as the end of the value
     }
+
     // Copy the value in the out buffer
     size_t len = end - start;
-    if (len > out_len) {
+    if (len >= out_len) { // Ensure there is room for the null terminator
         return ERR_RUNTIME;
     }
     strncpy(out, start, len);
