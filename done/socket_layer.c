@@ -67,6 +67,7 @@ ssize_t tcp_read(int active_socket, char* buf, size_t buflen){
 
     M_REQUIRE_NON_NULL(buf);
     if (buflen <= 0 || active_socket < 0) {
+        printf("active_socket: %d\n", active_socket);
         perror("Error reading from socket");
         return ERR_INVALID_ARGUMENT;
     }

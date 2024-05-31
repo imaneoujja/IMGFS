@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <signal.h>
-
+#include <pthread.h>
 #include "http_prot.h"
 #include "http_net.h"
 #include "socket_layer.h"
@@ -20,7 +20,7 @@
 #include "error.h"
 
 static int passive_socket = -1;
-static EventCallback cb = handle_http_message;
+static EventCallback cb;
 
 #define MK_OUR_ERR(X) \
 static int our_ ## X = X
@@ -31,14 +31,19 @@ MK_OUR_ERR(ERR_OUT_OF_MEMORY);
 MK_OUR_ERR(ERR_IO);
 
 static void* handle_connection(void *arg) {
-   if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
-   int client_fd = *(int *)arg;
+    // Avoid SIGINT and SIGTERM signals (left to the main thread)
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGINT );
+    sigaddset(&mask, SIGTERM);
+    pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
+    if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
+    int client_fd = *(int *)arg;
 
     // buffer for the http header - used allocation so that I can assign new value to it
     char *rcvbuf = malloc(MAX_HEADER_SIZE + 1);
     if (rcvbuf == NULL) return &our_ERR_OUT_OF_MEMORY;
-
     size_t read_bytes = 0;
     char *header_end = NULL;
     int content_len = 0; // ZAC: explicitly initialized content length to 0.
@@ -53,12 +58,10 @@ static void* handle_connection(void *arg) {
         if (num_bytes_read <= 0) {
             free(rcvbuf);
             rcvbuf = NULL;
-            perror("1");
             close(client_fd);
 
             return &our_ERR_IO;
         }
-
         // Search for the header delimiter
         if (header_end == NULL) {
             header_end = strstr(rcvbuf, HTTP_HDR_END_DELIM);
@@ -74,7 +77,6 @@ static void* handle_connection(void *arg) {
         if (ret_parsed_mess < 0) {
             free(rcvbuf); // parse_message returns negative if an error occurred (http_prot.h)
             rcvbuf = NULL;
-            perror("2");
             close(client_fd);
 
             return ret_parsed_mess;
@@ -85,7 +87,6 @@ static void* handle_connection(void *arg) {
                 if (!new_buf) {
                     free(rcvbuf);
                     rcvbuf = NULL;
-                    perror("3");
                     close(client_fd);
 
                     return &our_ERR_OUT_OF_MEMORY;
@@ -98,7 +99,6 @@ static void* handle_connection(void *arg) {
             if (callback_result < 0) {
                 free(rcvbuf);
                 rcvbuf = NULL;
-                perror("4");
                 close(client_fd);
 
                 return &our_ERR_IO;
@@ -108,6 +108,7 @@ static void* handle_connection(void *arg) {
                 extended = 0;
                 header_end = NULL;
                 memset(rcvbuf, 0, MAX_HEADER_SIZE);
+
             }
         }
     } while (1);
@@ -115,8 +116,6 @@ static void* handle_connection(void *arg) {
     free(rcvbuf);
     rcvbuf = NULL;
     close(client_fd);
-    perror("5");
-
 
     return &our_ERR_NONE;
 }
@@ -128,6 +127,8 @@ static void* handle_connection(void *arg) {
 int http_init(uint16_t port, EventCallback callback)
 {
     passive_socket = tcp_server_init(port);
+    printf("HELLO\n");
+
     cb = callback;
     return passive_socket;
 }
@@ -145,20 +146,53 @@ void http_close(void)
     }
 }
 
-/***********************
+/*******************************************************************
+ * Thread function to handle the connection
+ */
+void* thread_func(void* arg) {
+    int* client_socket = (int*)arg;
+    printf("client_socket: %d\n", *client_socket);
+    handle_connection(client_socket);
+    return NULL;
+}
+
+/*******************************************************************
  * Receive content
  */
 int http_receive(void) {
-    int client_socket = tcp_accept(passive_socket);
-    if (client_socket < 0) {
-        close(passive_socket);
-        return ERR_IO;
+    // All created threads will have same attributes
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    int* active_socket = calloc(1,sizeof(int));
+    if (active_socket == NULL) {
+        perror("Error allocating memory for active socket");
+        pthread_attr_destroy(&attr);
+        return ERR_OUT_OF_MEMORY;
     }
-    handle_connection((void*)&client_socket);
+    while (1) {
+        // Accept connection
+        *active_socket = tcp_accept(passive_socket);
+        printf("active_socket: %d\n", *active_socket);
+        if (*active_socket < 0) {
+            perror("Error accepting connection");
+            close(*active_socket);
+            continue;
+        }
+        // Create thread
+        pthread_t thread;
+        if (pthread_create(&thread, &attr, thread_func, active_socket) != 0) {
+            perror("Error creating thread");
+            close(*active_socket);
+        }
 
+    }
+
+    pthread_attr_destroy(&attr);
     return ERR_NONE;
-
 }
+
+
 /***********************
  * Serve a file content over HTTP
  */

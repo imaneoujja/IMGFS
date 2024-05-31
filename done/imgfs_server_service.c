@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h> // uint16_t
-
+#include <pthread.h>
 #include "error.h"
 #include "util.h" // atouint16
 #include "imgfs.h"
@@ -19,6 +19,7 @@
 // Main in-memory structure for imgFS
 static struct imgfs_file fs_file;
 static uint16_t server_port = DEFAULT_LISTENING_PORT;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define URI_ROOT "/imgfs"
 #define DEFAULT_LISTENING_PORT 8000
@@ -29,30 +30,36 @@ static uint16_t server_port = DEFAULT_LISTENING_PORT;
  ******************** */
 int server_startup(int argc, char **argv) {
     M_REQUIRE_NON_NULL(argv);
+    if (pthread_mutex_init(&mutex, NULL) != ERR_NONE){
+        perror("pthread_mutex_init");
+        return ERR_RUNTIME;
+    }
 
-    if (argc < 3) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <imgFS_filename> [port]\n", argv[0]);
         return ERR_NOT_ENOUGH_ARGUMENTS;
     }
-
-    int err = do_open(argv[1], "rb+", &fs_file);
-    if (err != ERR_NONE) {
-        return err;
+    if (pthread_mutex_lock(&mutex) != ERR_NONE){
+        perror("pthread_mutex_lock");
+        return ERR_RUNTIME;
     }
-
+    if (do_open(argv[1], "rb+", &fs_file) != ERR_NONE) {
+        fprintf(stderr, "Failed to open ImgFS file: %s\n", argv[1]);
+        return ERR_IO;
+    }
+    if (pthread_mutex_unlock(&mutex) != ERR_NONE){
+        perror("pthread_mutex_lock");
+        return ERR_RUNTIME;
+    }
     print_header(&fs_file.header);
 
     if (argc > 2) {
-        err = atouint16(argv[2]);
-        if (err >= 1024) {
-            server_port = err;
-        }
-    } else {
-        server_port = DEFAULT_LISTENING_PORT;
+        server_port = atouint16(argv[2]);
+        if (server_port == 0) server_port = DEFAULT_LISTENING_PORT;
     }
 
-    int server_socket = http_init(server_port, handle_http_message);
-    if (server_socket < 0) {
-        http_close;
+    if (http_init(server_port, handle_http_message) < 0) {
+        fprintf(stderr, "HTTP initialization failed on port %u\n", server_port);
         return ERR_IO;
     }
 
@@ -60,13 +67,17 @@ int server_startup(int argc, char **argv) {
     return ERR_NONE;
 }
 
-/***********************//*
+/*
  * Shutdown function. Free the structures and close the file.
  ******************** */
-void server_shutdown(void) {
+void server_shutdown (void)
+{
     fprintf(stderr, "Shutting down...\n");
-    http_close();
+    pthread_mutex_lock(&mutex);
     do_close(&fs_file);
+    pthread_mutex_unlock(&mutex);
+    pthread_mutex_destroy(&mutex);
+    http_close();
 }
 
 /************************
