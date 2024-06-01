@@ -39,80 +39,67 @@ static void* handle_connection(void *arg) {
     pthread_sigmask(SIG_BLOCK, &mask, NULL);
 
     if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
-    int client_fd = *(int *)arg;
+    int socketId = *(int *)arg;
+// agv free, ;clsose(socketID)
+    char *rcvbuf = calloc(1, MAX_HEADER_SIZE);
+    if (!rcvbuf) {
+        perror("Failed to allocate buffer");
+        return &our_ERR_OUT_OF_MEMORY;
+    }
 
+    ssize_t bytes_read;
+    size_t total_read = 0;
+    int content_length = 0;
+    struct http_message http_msg = {0};
+    int parse_result;
+    int buffer_size = MAX_HEADER_SIZE;
+    int extension_done = 0;
 
-    char *rcvbuf = malloc(MAX_HEADER_SIZE + 1);
-    if (rcvbuf == NULL) return &our_ERR_OUT_OF_MEMORY;
-    size_t total = 0;
-    char *header_end = NULL;
-    int content_len = 0; 
-    int extended = 0;
-
-    struct http_message message;
-
-    do {
-        ssize_t read_bytes = tcp_read(client_fd,
-                                          rcvbuf + total,
-                                          MAX_HEADER_SIZE + content_len - total);
-        if (read_bytes <= 0) {
+    while (1) {
+        bytes_read = tcp_read(socketId, rcvbuf + total_read, buffer_size);
+        if (bytes_read < 0) {
+            perror("tcp_read error");
             free(rcvbuf);
-            rcvbuf = NULL;
-            close(client_fd);
+            return &our_ERR_IO;
+        } else if (bytes_read == 0) break;
 
+        total_read += bytes_read;
+
+        parse_result = http_parse_message(rcvbuf, total_read, &http_msg, &content_length);
+        if (parse_result < 0) {
+            free(rcvbuf);
+            return &our_ERR_INVALID_ARGUMENT;
+        }
+
+        if (parse_result == 0 && !extension_done && content_length > 0 && total_read < content_length + MAX_HEADER_SIZE) {
+            buffer_size = content_length + MAX_HEADER_SIZE;
+            char *new_buf = realloc(rcvbuf, buffer_size);
+            if (new_buf == NULL) {
+                perror("Failed to extend buffer");
+                free(rcvbuf);
+                return &our_ERR_OUT_OF_MEMORY;
+            }
+            rcvbuf = new_buf;
+            extension_done = 1;
+        }
+
+        if (parse_result == 1) {
+            cb(&http_msg, socketId);
+
+            memset(rcvbuf, 0, buffer_size);
+            total_read = 0;
+            content_length = 0;
+            parse_result = 0;
+            extension_done = 0;
+        }
+
+        if (total_read >= buffer_size) {
+            free(rcvbuf);
             return &our_ERR_IO;
         }
-        if (header_end == NULL) {
-            header_end = strstr(rcvbuf, HTTP_HDR_END_DELIM);
-            if (header_end != NULL) {
-                header_end += strlen(HTTP_HDR_END_DELIM);  
-            }
-        }
-
-        total += read_bytes;
-        int ret_parsed_mess = http_parse_message(rcvbuf ,total,&message, &content_len);
-        if (ret_parsed_mess < 0) {
-            free(rcvbuf); 
-            rcvbuf = NULL;
-            close(client_fd);
-
-            return ret_parsed_mess;
-        } else if (ret_parsed_mess == 0) {
-            if (!extended && content_len > 0 && rcvbuf+total -header_end< content_len) {
-                char *new_buf = realloc(rcvbuf, MAX_HEADER_SIZE + content_len);
-                if (!new_buf) {
-                    free(rcvbuf);
-                    rcvbuf = NULL;
-                    close(client_fd);
-
-                    return &our_ERR_OUT_OF_MEMORY;
-                }
-                rcvbuf = new_buf;
-                extended = 1;
-            }
-        } else { 
-            int callback_result = cb(&message, client_fd);
-            if (callback_result < 0) {
-                free(rcvbuf);
-                rcvbuf = NULL;
-                close(client_fd);
-
-                return &our_ERR_IO;
-            } else {
-                total = 0;
-                content_len = 0;
-                extended = 0;
-                header_end = NULL;
-                memset(rcvbuf, 0, MAX_HEADER_SIZE);
-
-            }
-        }
-    } while (1);
+    }
 
     free(rcvbuf);
-    rcvbuf = NULL;
-    close(client_fd);
-
     return &our_ERR_NONE;
 }
 
