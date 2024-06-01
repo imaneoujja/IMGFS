@@ -41,48 +41,44 @@ static void* handle_connection(void *arg) {
     if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
     int client_fd = *(int *)arg;
 
-    // buffer for the http header - used allocation so that I can assign new value to it
+
     char *rcvbuf = malloc(MAX_HEADER_SIZE + 1);
     if (rcvbuf == NULL) return &our_ERR_OUT_OF_MEMORY;
-    size_t read_bytes = 0;
+    size_t total = 0;
     char *header_end = NULL;
-    int content_len = 0; // ZAC: explicitly initialized content length to 0.
+    int content_len = 0; 
     int extended = 0;
 
     struct http_message message;
 
     do {
-        ssize_t num_bytes_read = tcp_read(client_fd,
-                                          rcvbuf + read_bytes,
-                                          MAX_HEADER_SIZE + content_len - read_bytes);
-        if (num_bytes_read <= 0) {
+        ssize_t read_bytes = tcp_read(client_fd,
+                                          rcvbuf + total,
+                                          MAX_HEADER_SIZE + content_len - total);
+        if (read_bytes <= 0) {
             free(rcvbuf);
             rcvbuf = NULL;
             close(client_fd);
 
             return &our_ERR_IO;
         }
-        // Search for the header delimiter
         if (header_end == NULL) {
             header_end = strstr(rcvbuf, HTTP_HDR_END_DELIM);
             if (header_end != NULL) {
-                header_end += strlen(HTTP_HDR_END_DELIM);  // Move past the delimiter
+                header_end += strlen(HTTP_HDR_END_DELIM);  
             }
         }
 
-
-        //=============================================WEEK 12==========================================================
-        read_bytes += num_bytes_read;
-        int ret_parsed_mess = http_parse_message(rcvbuf ,read_bytes,&message, &content_len);
+        total += read_bytes;
+        int ret_parsed_mess = http_parse_message(rcvbuf ,total,&message, &content_len);
         if (ret_parsed_mess < 0) {
-            free(rcvbuf); // parse_message returns negative if an error occurred (http_prot.h)
+            free(rcvbuf); 
             rcvbuf = NULL;
             close(client_fd);
 
             return ret_parsed_mess;
         } else if (ret_parsed_mess == 0) {
-            // partial treatment (see http_prot.h)
-            if (!extended && content_len > 0 && rcvbuf+read_bytes -header_end< content_len) {
+            if (!extended && content_len > 0 && rcvbuf+total -header_end< content_len) {
                 char *new_buf = realloc(rcvbuf, MAX_HEADER_SIZE + content_len);
                 if (!new_buf) {
                     free(rcvbuf);
@@ -94,7 +90,7 @@ static void* handle_connection(void *arg) {
                 rcvbuf = new_buf;
                 extended = 1;
             }
-        } else { // case where the message was fully received and parsed
+        } else { 
             int callback_result = cb(&message, client_fd);
             if (callback_result < 0) {
                 free(rcvbuf);
@@ -103,7 +99,7 @@ static void* handle_connection(void *arg) {
 
                 return &our_ERR_IO;
             } else {
-                read_bytes = 0;
+                total = 0;
                 content_len = 0;
                 extended = 0;
                 header_end = NULL;
