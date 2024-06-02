@@ -14,7 +14,8 @@
 #define SMALL_FILE "Small file"
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     // Check for correct number of arguments: the program name , the port and the filepath
     if (argc != 3) {
         return ERR_NOT_ENOUGH_ARGUMENTS;
@@ -72,7 +73,7 @@ int main(int argc, char *argv[]) {
     printf("Sending size %ld: \n", file_size);
     // Wait for positive acknowledgement
     char ack0[strlen(SMALL_FILE)+1];
-    if (tcp_read(sockfd, ack0, strlen(SMALL_FILE)) < strlen(BIG_FILE)){
+    if (tcp_read(sockfd, ack0, strlen(SMALL_FILE)) < strlen(BIG_FILE)) {
         perror("Error receiving first acknowledgment from server");
         close(sockfd);
         fclose(file);
@@ -92,7 +93,7 @@ int main(int argc, char *argv[]) {
     // Wait for positive acknowledgement
     char ack1[3];
     ssize_t bytes_received = tcp_read(sockfd, ack1, 2);
-    if (bytes_received!= 2 || strncmp(ack1, ACK,2) != 0){
+    if (bytes_received!= 2 || strncmp(ack1, ACK,2) != 0) {
         perror("Error receiving second acknowledgment from server");
         close(sockfd);
         fclose(file);

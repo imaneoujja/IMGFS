@@ -14,7 +14,8 @@
  * Returns: 1 if it does, 0 if it does not.
  *
  */
-int http_match_uri(const struct http_message *message, const char *target_uri){
+int http_match_uri(const struct http_message *message, const char *target_uri)
+{
     M_REQUIRE_NON_NULL(message);
     M_REQUIRE_NON_NULL(message->uri.val);
     M_REQUIRE_NON_NULL(target_uri);
@@ -24,7 +25,8 @@ int http_match_uri(const struct http_message *message, const char *target_uri){
 /**
  * @brief Compare method with verb and return 1 if they are equal, 0 otherwise
  */
-int http_match_verb(const struct http_string* method, const char* verb){
+int http_match_verb(const struct http_string* method, const char* verb)
+{
     M_REQUIRE_NON_NULL(method);
     M_REQUIRE_NON_NULL(verb);
     M_REQUIRE_NON_NULL(method->val);
@@ -37,8 +39,9 @@ int http_match_verb(const struct http_string* method, const char* verb){
  * Return the length of the value.
  * 0 or negative return values indicate an error.
  */
-int http_get_var(const struct http_string* url, const char* name, char* out, size_t out_len){
-   M_REQUIRE_NON_NULL(url);
+int http_get_var(const struct http_string* url, const char* name, char* out, size_t out_len)
+{
+    M_REQUIRE_NON_NULL(url);
     M_REQUIRE_NON_NULL(url->val);
     M_REQUIRE_NON_NULL(name);
     M_REQUIRE_NON_NULL(out);
@@ -87,7 +90,8 @@ int http_get_var(const struct http_string* url, const char* name, char* out, siz
  *  0 if the message has not been received completely (partial treatment) or an error occurred
  *  1 if the message was fully received and parsed
  */
-int http_parse_message(const char *stream, size_t bytes_received, struct http_message *out, int *content_len) {
+int http_parse_message(const char *stream, size_t bytes_received, struct http_message *out, int *content_len)
+{
     M_REQUIRE_NON_NULL(stream);
     M_REQUIRE_NON_NULL(out);
     M_REQUIRE_NON_NULL(content_len);
@@ -122,7 +126,7 @@ int http_parse_message(const char *stream, size_t bytes_received, struct http_me
         return 0;
     }
     // Get the "Content-Length" value from the parsed header lines
-for (size_t i = 0; i < out->num_headers; ++i) {
+    for (size_t i = 0; i < out->num_headers; ++i) {
         if (strncmp(out->headers[i].key.val, "Content-Length", strlen("Content-Length")) == 0) {
             *content_len = atoi(out->headers[i].value.val);
             break;
@@ -146,7 +150,8 @@ for (size_t i = 0; i < out->num_headers; ++i) {
  * Returns:
  * - the pointer to the first character after the delimiter
  */
-static_unless_test const char* get_next_token(const char* message, const char* delimiter, struct http_string* output){
+static_unless_test const char* get_next_token(const char* message, const char* delimiter, struct http_string* output)
+{
     M_REQUIRE_NON_NULL(message);
     M_REQUIRE_NON_NULL(delimiter);
     // Look for the delimiter in the message
@@ -160,7 +165,7 @@ static_unless_test const char* get_next_token(const char* message, const char* d
         output->val = message;
     }
     // Third token will be skipped but must be checked
-    else{
+    else {
         assert(strncmp(message, "HTTP/1.1", strlen("HTTP/1.1")) == 0);
     }
 
@@ -174,7 +179,8 @@ static_unless_test const char* get_next_token(const char* message, const char* d
  * Returns:
  * - the position right after the last header line
  */
-static_unless_test const char* http_parse_headers(const char* header_start, struct http_message* output) {
+static_unless_test const char* http_parse_headers(const char* header_start, struct http_message* output)
+{
     // Check that the line delimiter is twice the line delimiter
     _Static_assert(strcmp(HTTP_HDR_END_DELIM, HTTP_LINE_DELIM HTTP_LINE_DELIM) == 0,
                    "HTTP_HDR_END_DELIM is not twice HTTP_LINE_DELIM");
@@ -188,7 +194,7 @@ static_unless_test const char* http_parse_headers(const char* header_start, stru
         }
         struct http_header* header = &output->headers[output->num_headers];
         // Parse the key
-        header_start = get_next_token(header_start, HTTP_HDR_KV_DELIM , &header->key);
+        header_start = get_next_token(header_start, HTTP_HDR_KV_DELIM, &header->key);
         if (header_start == NULL) {
             return NULL;
         }

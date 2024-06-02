@@ -4,7 +4,8 @@
 #include <stdlib.h>  // for malloc, free
 #include <string.h>  // for memcpy
 
-int do_read(const char* img_id, int resolution, char** image_buffer, uint32_t* image_size, struct imgfs_file* imgfs_file) {
+int do_read(const char* img_id, int resolution, char** image_buffer, uint32_t* image_size, struct imgfs_file* imgfs_file)
+{
     M_REQUIRE_NON_NULL(img_id);
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
@@ -17,7 +18,7 @@ int do_read(const char* img_id, int resolution, char** image_buffer, uint32_t* i
     int index = -1;
     while (j<imgfs_file->header.nb_files && i < imgfs_file->header.max_files) {
         if (imgfs_file->metadata[i].is_valid) {
-            if(strcmp(imgfs_file->metadata[i].img_id, img_id) == 0){
+            if(strcmp(imgfs_file->metadata[i].img_id, img_id) == 0) {
                 index = i;
                 break;
             }

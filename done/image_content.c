@@ -6,7 +6,8 @@
 #include <stdlib.h>
 
 // Helper function to free memory
-void freeMemory(unsigned char* buffer) {
+void freeMemory(unsigned char* buffer)
+{
     free(buffer);
     buffer = NULL;
 }
@@ -35,10 +36,10 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
 
     // If the requested image already exists in the corresponding resolution, do nothing;
     if (resolution == ORIG_RES) return ERR_NONE;
-    
+
     // Check if the image already exists in the requested resolution
     if (imgfs_file->metadata[index].size[resolution] != 0) return ERR_NONE;
-    
+
 
     // Read the original image from disk into buffer and allocate space for buffer
     VipsImage *original_image;
@@ -67,7 +68,7 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     // Resize the image to the requested resolution
     VipsImage *resized_image = NULL;
     if (vips_thumbnail_image(original_image, &resized_image, imgfs_file->header.resized_res[2*resolution], "height",
-                            imgfs_file->header.resized_res[(2*resolution) + 1],NULL) != ERR_NONE) {
+                             imgfs_file->header.resized_res[(2*resolution) + 1],NULL) != ERR_NONE) {
         freeMemory(buffer);
         g_object_unref(original_image);
         return ERR_IMGLIB;
@@ -125,7 +126,8 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
  */
 
 int get_resolution(uint32_t *height, uint32_t *width,
-                   const char *image_buffer, size_t image_size) {
+                   const char *image_buffer, size_t image_size)
+{
     M_REQUIRE_NON_NULL(height);
     M_REQUIRE_NON_NULL(width);
     M_REQUIRE_NON_NULL(image_buffer);

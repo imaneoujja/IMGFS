@@ -31,7 +31,7 @@ static const uint16_t MAX_SMALL_RES = 512;
 int help(int useless _unused, char** useless_too _unused)
 {
 
-printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
+    printf("imgfscmd [COMMAND] [ARGUMENTS]\n");
     printf("  help: displays this help.\n");
     printf("  list <imgFS_filename>: list imgFS content.\n");
     printf("  create <imgFS_filename> [options]: create a new imgFS.\n");
@@ -197,8 +197,9 @@ int do_delete_cmd(int argc, char** argv)
  *  Create the name of the file to use to save the read image
  */
 
-static void create_name(const char* img_id, int resolution, char** new_name){
-    if (resolution < 0 || resolution >= NB_RES  || !img_id  || !new_name ){
+static void create_name(const char* img_id, int resolution, char** new_name)
+{
+    if (resolution < 0 || resolution >= NB_RES  || !img_id  || !new_name ) {
         return;
     }
     const char* resolutions[] = {"_thumb", "_small", "_orig"};
@@ -217,7 +218,8 @@ static void create_name(const char* img_id, int resolution, char** new_name){
 /**********************************************************************
  * Write content of buffer to file
  */
-static int write_disk_image(const char *filename, const char *image_buffer, uint32_t image_size){
+static int write_disk_image(const char *filename, const char *image_buffer, uint32_t image_size)
+{
     // Check validty of pointers
     M_REQUIRE_NON_NULL(filename);
     M_REQUIRE_NON_NULL(image_buffer);
@@ -227,7 +229,7 @@ static int write_disk_image(const char *filename, const char *image_buffer, uint
     size_t bytes_w = fwrite(image_buffer,image_size,1,file);
     fclose(file);
     if (bytes_w != 1) return ERR_IO;
-    
+
     return ERR_NONE;
 }
 
@@ -304,7 +306,8 @@ int do_read_cmd(int argc, char **argv)
  * Reads an image from disk into a buffer.
  *******************************************************************/
 
-int read_disk_image(const char *path, char **image_buffer, uint32_t *image_size) {
+int read_disk_image(const char *path, char **image_buffer, uint32_t *image_size)
+{
     M_REQUIRE_NON_NULL(path);
     M_REQUIRE_NON_NULL(image_buffer);
     M_REQUIRE_NON_NULL(image_size);

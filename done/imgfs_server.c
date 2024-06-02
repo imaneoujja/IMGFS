@@ -23,7 +23,8 @@
 Signal handler function to handle termination signals.
  *************************/
 
-static void signal_handler(int sig_num) {
+static void signal_handler(int sig_num)
+{
     server_shutdown();
     exit(EXIT_SUCCESS);  // Ensure clean exit
 }
@@ -53,7 +54,8 @@ static void set_signal_handler(void)
 /************************
 Main function for the ImgFS server.
  *************************/
-int main (int argc, char *argv[]){
+int main (int argc, char *argv[])
+{
 
     int err = server_startup(argc, argv);
     if (err != ERR_NONE) {

@@ -11,10 +11,11 @@
  * @param uint16_t port number
  * @return socket id
  */
-int tcp_server_init(uint16_t port){
+int tcp_server_init(uint16_t port)
+{
     // Create a socket
     int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if  (sock_fd == -1){
+    if  (sock_fd == -1) {
         perror("Error creating socket");
         return ERR_IO;
     }
@@ -32,13 +33,13 @@ int tcp_server_init(uint16_t port){
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     // Bind the socket to the address
-    if (bind(sock_fd, (struct sockaddr*) &addr,sizeof(addr)) != ERR_NONE){
+    if (bind(sock_fd, (struct sockaddr*) &addr,sizeof(addr)) != ERR_NONE) {
         perror("Error binding socket");
         close(sock_fd);
         return ERR_IO;
     }
     // Listen for incoming connections
-    if (listen(sock_fd, SOMAXCONN)!=ERR_NONE){
+    if (listen(sock_fd, SOMAXCONN)!=ERR_NONE) {
         perror("Error listening on socket");
         close(sock_fd);
         return ERR_IO;
@@ -51,7 +52,8 @@ int tcp_server_init(uint16_t port){
  * @param passive_socket the file descriptor of the socket that listens for new connections
  * @return the socket id of the new connection
  */
-int tcp_accept(int passive_socket){
+int tcp_accept(int passive_socket)
+{
     return accept(passive_socket, NULL, NULL);
 }
 
@@ -62,7 +64,8 @@ int tcp_accept(int passive_socket){
  * @param buflen the size of the buffer
  * @return the number of bytes read or -1 on error
  */
-ssize_t tcp_read(int active_socket, char* buf, size_t buflen){
+ssize_t tcp_read(int active_socket, char* buf, size_t buflen)
+{
     // Check validity of arguments
 
     M_REQUIRE_NON_NULL(buf);
@@ -81,7 +84,8 @@ ssize_t tcp_read(int active_socket, char* buf, size_t buflen){
  * @param response_len the size of the message to be sent
  * @return the number of bytes sent or -1 on error
  */
-ssize_t tcp_send(int active_socket, const char* response, size_t response_len){
+ssize_t tcp_send(int active_socket, const char* response, size_t response_len)
+{
     // Check validity of arguments
     M_REQUIRE_NON_NULL(response);
     if (response_len == 0 || active_socket < 0) {

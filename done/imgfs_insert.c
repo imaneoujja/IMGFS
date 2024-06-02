@@ -11,20 +11,21 @@
  * @return Some error code. 0 if no error.
  */
 int do_insert(const char* image_buffer, size_t image_size,
-              const char* img_id, struct imgfs_file* imgfs_file){
+              const char* img_id, struct imgfs_file* imgfs_file)
+{
     // Checking the validity of the pointers
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(img_id);
     M_REQUIRE_NON_NULL(image_buffer);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
-    if (imgfs_file->header.nb_files >= imgfs_file->header.max_files){
+    if (imgfs_file->header.nb_files >= imgfs_file->header.max_files) {
         perror("imgfs full");
         return ERR_IMGFS_FULL;
     }
 
-    for (int i=0;i<imgfs_file->header.max_files;i++){
+    for (int i=0; i<imgfs_file->header.max_files; i++) {
         //Check if image is empty
-        if (!imgfs_file->metadata[i].is_valid){
+        if (!imgfs_file->metadata[i].is_valid) {
 
             //Initialize the metadata
             memset(&imgfs_file->metadata[i],0,sizeof(struct img_metadata));
@@ -35,7 +36,7 @@ int do_insert(const char* image_buffer, size_t image_size,
             uint32_t width;
             //Get width and height
             int error = get_resolution(&height, &width,image_buffer, image_size);
-            if (error != ERR_NONE){
+            if (error != ERR_NONE) {
                 perror("get_resolution");
                 return error;
             }
@@ -45,18 +46,18 @@ int do_insert(const char* image_buffer, size_t image_size,
             imgfs_file->metadata[i].is_valid = NON_EMPTY;
             //Check whether image is already in database or img_id belongs to another image
             error = do_name_and_content_dedup(imgfs_file,i);
-            if (error != ERR_NONE){
+            if (error != ERR_NONE) {
                 perror("do_name_and_content_dedup");
                 return error;
             }
             //If image is not already in database, write it at the end of file
-            if (imgfs_file->metadata[i].offset[ORIG_RES] == 0){
-                if (fseek(imgfs_file->file,0,SEEK_END) != ERR_NONE){
+            if (imgfs_file->metadata[i].offset[ORIG_RES] == 0) {
+                if (fseek(imgfs_file->file,0,SEEK_END) != ERR_NONE) {
                     perror("fseek");
                     return ERR_IO;
                 }
                 size_t bytes_w = fwrite(image_buffer, image_size,1,imgfs_file->file);
-                if (bytes_w != 1){
+                if (bytes_w != 1) {
                     perror("fwrite");
                     return ERR_IO;
                 }
@@ -69,7 +70,7 @@ int do_insert(const char* image_buffer, size_t image_size,
                 perror("fseek");
                 return ERR_IO;
             }
-            if (fwrite(&imgfs_file->header,sizeof(struct imgfs_header),1,imgfs_file->file) != 1){
+            if (fwrite(&imgfs_file->header,sizeof(struct imgfs_header),1,imgfs_file->file) != 1) {
                 perror("fwrite");
                 return ERR_IO;
             }
@@ -78,7 +79,7 @@ int do_insert(const char* image_buffer, size_t image_size,
                 perror("fseek");
                 return ERR_IO;
             }
-            if (fwrite(&imgfs_file->metadata[i], sizeof(struct img_metadata),1,imgfs_file->file) != 1){
+            if (fwrite(&imgfs_file->metadata[i], sizeof(struct img_metadata),1,imgfs_file->file) != 1) {
                 perror("fwrite");
                 return ERR_IO;
             }

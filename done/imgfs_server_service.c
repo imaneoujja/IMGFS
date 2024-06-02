@@ -28,9 +28,10 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
  * Startup function. Create imgFS file and load in-memory structure.
  * Pass the imgFS file name as argv[1] and optionally port number as argv[2]
  ******************** */
-int server_startup(int argc, char **argv) {
+int server_startup(int argc, char **argv)
+{
     M_REQUIRE_NON_NULL(argv);
-    if (pthread_mutex_init(&mutex, NULL) != ERR_NONE){
+    if (pthread_mutex_init(&mutex, NULL) != ERR_NONE) {
         perror("pthread_mutex_init");
         return ERR_RUNTIME;
     }
@@ -39,7 +40,7 @@ int server_startup(int argc, char **argv) {
         fprintf(stderr, "Usage: %s <imgFS_filename> [port]\n", argv[0]);
         return ERR_NOT_ENOUGH_ARGUMENTS;
     }
-    if (pthread_mutex_lock(&mutex) != ERR_NONE){
+    if (pthread_mutex_lock(&mutex) != ERR_NONE) {
         perror("pthread_mutex_lock");
         return ERR_RUNTIME;
     }
@@ -47,7 +48,7 @@ int server_startup(int argc, char **argv) {
         fprintf(stderr, "Failed to open ImgFS file: %s\n", argv[1]);
         return ERR_IO;
     }
-    if (pthread_mutex_unlock(&mutex) != ERR_NONE){
+    if (pthread_mutex_unlock(&mutex) != ERR_NONE) {
         perror("pthread_mutex_lock");
         return ERR_RUNTIME;
     }
@@ -120,16 +121,16 @@ int handle_http_message(struct http_message* msg, int sockfd)
         return http_serve_file(sockfd, BASE_FILE);
     }
 
-    if (http_match_uri(msg, URI_ROOT "/list") ){
+    if (http_match_uri(msg, URI_ROOT "/list") ) {
         return handle_list_call(sockfd);
     }
-    if(   (http_match_uri(msg, URI_ROOT "/insert")&& http_match_verb(&msg->method, "POST")) ){
+    if(   (http_match_uri(msg, URI_ROOT "/insert")&& http_match_verb(&msg->method, "POST")) ) {
         return handle_insert_call(msg, sockfd);
     }
-    if(http_match_uri(msg, URI_ROOT "/read")){
+    if(http_match_uri(msg, URI_ROOT "/read")) {
         return handle_read_call(msg,sockfd);
     }
-    if(   http_match_uri(msg, URI_ROOT "/delete")){
+    if(   http_match_uri(msg, URI_ROOT "/delete")) {
         return handle_delete_call(msg,sockfd);
     }
     return reply_error_msg(sockfd, ERR_INVALID_COMMAND);
@@ -139,7 +140,8 @@ int handle_http_message(struct http_message* msg, int sockfd)
 /************************
  * Handling list calls
  ******************** */
-int handle_list_call(int connection) {
+int handle_list_call(int connection)
+{
     // Set the output mode to JSON
     enum do_list_mode output_mode = JSON;
     char* json;
@@ -147,7 +149,7 @@ int handle_list_call(int connection) {
     // List using the do_list function
     int error = do_list(&fs_file, output_mode, &json);
     if (error != ERR_NONE) return reply_error_msg(connection, error);
-    
+
 
     // Send the HTTP reply with the JSON content
     int result = http_reply(connection, HTTP_OK, "Content-Type: application/json\r\n", json, strlen(json));
@@ -159,7 +161,8 @@ int handle_list_call(int connection) {
 /************************
  * Handling delete calls
  ******************** */
-int handle_delete_call(struct http_message *msg, int sockfd) {
+int handle_delete_call(struct http_message *msg, int sockfd)
+{
     char img_id[MAX_IMG_ID];
 
     // Get the img_id parameter from the URI
@@ -183,7 +186,8 @@ int handle_delete_call(struct http_message *msg, int sockfd) {
 /************************
  * Handling read calls
  ******************** */
-int handle_read_call(struct http_message *msg, int sockfd) {
+int handle_read_call(struct http_message *msg, int sockfd)
+{
     char img_id[MAX_IMG_ID + 1] = {0};
     char res[6] = {0};
     int err;
@@ -204,7 +208,7 @@ int handle_read_call(struct http_message *msg, int sockfd) {
     // Convert the resolution string to an integer
     int resolution = resolution_atoi(res);
     if (resolution == -1) return reply_error_msg(sockfd, ERR_RESOLUTIONS);
-    
+
 
     // Prepare to read the image
     char *image_buffer = NULL;
@@ -223,7 +227,8 @@ int handle_read_call(struct http_message *msg, int sockfd) {
 }
 
 // Function to handle insert calls
-int handle_insert_call(struct http_message *msg, int sockfd) {
+int handle_insert_call(struct http_message *msg, int sockfd)
+{
     char img_id[MAX_IMG_ID + 1];
 
     // Get the name parameter from the URI
@@ -231,12 +236,12 @@ int handle_insert_call(struct http_message *msg, int sockfd) {
 
     // Check if the body is empty or the name parameter is not provided
     if (msg->body.len == 0 || err <= 0)  return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
-    
+
 
     // Allocate memory for the image buffer
     char *image_buffer = calloc(1, msg->body.len);
     if (image_buffer == NULL) return reply_error_msg(sockfd, ERR_OUT_OF_MEMORY);
-    
+
 
     // Copy the image data to the buffer
     memcpy(image_buffer, msg->body.val, msg->body.len);
@@ -246,6 +251,6 @@ int handle_insert_call(struct http_message *msg, int sockfd) {
     free(image_buffer);
 
     if (ret != ERR_NONE) return reply_error_msg(sockfd, ret);
-    
+
     return reply_302_msg(sockfd);
 }
