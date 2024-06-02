@@ -6,6 +6,7 @@
 
 int do_read(const char* img_id, int resolution, char** image_buffer, uint32_t* image_size, struct imgfs_file* imgfs_file)
 {
+    //Checking the validity of the parameters
     M_REQUIRE_NON_NULL(img_id);
     M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
