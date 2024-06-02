@@ -67,6 +67,7 @@ static void* handle_connection(void *arg)
 
             return &our_ERR_IO;
         }
+        if(bytes_read==0) break;
         // Check if the header is complete
         if (header_end == NULL) {
             header_end = strstr(rcvbuf, HTTP_HDR_END_DELIM);

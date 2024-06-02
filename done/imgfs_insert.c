@@ -13,77 +13,86 @@
 int do_insert(const char* image_buffer, size_t image_size,
               const char* img_id, struct imgfs_file* imgfs_file)
 {
-    // Checking the validity of the pointers
-    M_REQUIRE_NON_NULL(imgfs_file);
-    M_REQUIRE_NON_NULL(img_id);
+    // Checking the validity of the parameters
     M_REQUIRE_NON_NULL(image_buffer);
+    M_REQUIRE_NON_NULL(img_id);
+    M_REQUIRE_NON_NULL(imgfs_file);
     M_REQUIRE_NON_NULL(imgfs_file->metadata);
-    if (imgfs_file->header.nb_files >= imgfs_file->header.max_files) {
-        perror("imgfs full");
-        return ERR_IMGFS_FULL;
-    }
+    
+    
+    if(image_size <= 0) return ERR_INVALID_ARGUMENT;
+    
 
-    for (int i=0; i<imgfs_file->header.max_files; i++) {
-        //Check if image is empty
-        if (!imgfs_file->metadata[i].is_valid) {
+    // Check if the image file system is full
+    uint32_t max_files=imgfs_file->header.max_files;
+    if(imgfs_file->header.nb_files >= max_files) return ERR_IMGFS_FULL;
+    
 
-            //Initialize the metadata
-            memset(&imgfs_file->metadata[i],0,sizeof(struct img_metadata));
-            SHA256(image_buffer, image_size,imgfs_file->metadata[i].SHA );
-            strncpy(imgfs_file->metadata[i].img_id, img_id,MAX_IMG_ID + 1);
-            imgfs_file->metadata[i].size[ORIG_RES] = (uint32_t)image_size;
-            uint32_t height;
-            uint32_t width;
-            //Get width and height
-            int error = get_resolution(&height, &width,image_buffer, image_size);
-            if (error != ERR_NONE) {
-                perror("get_resolution");
-                return error;
-            }
-            imgfs_file->metadata[i].orig_res[0] = width;
-            imgfs_file->metadata[i].orig_res[1] = height;
 
-            imgfs_file->metadata[i].is_valid = NON_EMPTY;
-            //Check whether image is already in database or img_id belongs to another image
-            error = do_name_and_content_dedup(imgfs_file,i);
-            if (error != ERR_NONE) {
-                perror("do_name_and_content_dedup");
-                return error;
-            }
-            //If image is not already in database, write it at the end of file
-            if (imgfs_file->metadata[i].offset[ORIG_RES] == 0) {
-                if (fseek(imgfs_file->file,0,SEEK_END) != ERR_NONE) {
-                    perror("fseek");
-                    return ERR_IO;
-                }
-                size_t bytes_w = fwrite(image_buffer, image_size,1,imgfs_file->file);
-                if (bytes_w != 1) {
-                    perror("fwrite");
-                    return ERR_IO;
-                }
-                imgfs_file->metadata[i].offset[ORIG_RES] = ftell(imgfs_file->file) - image_size;
-            }
-            //Update all the necessary image database header fields and write header to file
-            imgfs_file->header.version += 1;
-            imgfs_file->header.nb_files += 1;
-            if (fseek(imgfs_file->file,0,SEEK_SET) != ERR_NONE) {
-                perror("fseek");
-                return ERR_IO;
-            }
-            if (fwrite(&imgfs_file->header,sizeof(struct imgfs_header),1,imgfs_file->file) != 1) {
-                perror("fwrite");
-                return ERR_IO;
-            }
-
-            if (fseek(imgfs_file->file,sizeof(struct img_metadata)*i,SEEK_CUR) != ERR_NONE) {
-                perror("fseek");
-                return ERR_IO;
-            }
-            if (fwrite(&imgfs_file->metadata[i], sizeof(struct img_metadata),1,imgfs_file->file) != 1) {
-                perror("fwrite");
-                return ERR_IO;
-            }
-            return ERR_NONE;
+    int index = -1;
+    for (int i = 0; i < max_files; ++i) {
+        if (imgfs_file->metadata[i].is_valid == EMPTY) {
+        index = i;
+        break;
         }
     }
+    if (index == -1) return ERR_IMGFS_FULL;
+    
+    struct img_metadata previous = imgfs_file->metadata[index];
+    // Compute the SHA-256 hash of the image
+    SHA256( (const unsigned char*) image_buffer, image_size, imgfs_file->metadata[index].SHA);
+    strcpy(imgfs_file->metadata[index].img_id, img_id); 
+    
+    imgfs_file->metadata[index].size[ORIG_RES] = (uint32_t) image_size;
+    
+    uint32_t width ;
+    uint32_t height ;
+
+    // Get the resolution of the image
+    int err = get_resolution(&height, &width, image_buffer, image_size);
+    if (err != ERR_NONE) return err;
+    
+
+    //Initializing variables
+    imgfs_file->metadata[index].unused_16 = EMPTY;
+    imgfs_file->metadata[index].is_valid = NON_EMPTY;
+
+    imgfs_file->metadata[index].orig_res[0] = width;
+    imgfs_file->metadata[index].orig_res[1] = height;
+
+    imgfs_file->metadata[index].size[THUMB_RES] = EMPTY;
+    imgfs_file->metadata[index].size[SMALL_RES] = EMPTY;
+
+    imgfs_file->metadata[index].offset[THUMB_RES] = EMPTY;
+    imgfs_file->metadata[index].offset[SMALL_RES] = EMPTY;
+
+
+    imgfs_file->header.nb_files++;
+    imgfs_file->header.version++;
+
+    // Perform deduplication
+    int dedup = do_name_and_content_dedup(imgfs_file, index);
+    if (dedup != ERR_NONE) {
+        memcpy(&imgfs_file->metadata[index], &previous, sizeof(struct img_metadata));
+        return dedup;
+    }
+
+   // Write the image to the file if not already present
+    if (imgfs_file->metadata[index].offset[ORIG_RES] == EMPTY) {
+        fseek(imgfs_file->file, EMPTY, SEEK_END); 
+        uint64_t pos = ftell(imgfs_file->file);
+        size_t write = fwrite(image_buffer, NON_EMPTY, image_size, imgfs_file->file);
+        if (write != image_size) return ERR_IO;
+            
+        imgfs_file->metadata[index].offset[ORIG_RES] = pos;
+    }
+     // Update the header
+    if(fseek(imgfs_file->file, EMPTY, SEEK_SET) )   return ERR_IO;
+    if ((fwrite(&imgfs_file->header, sizeof(char), sizeof(struct imgfs_header), imgfs_file->file)) != sizeof(struct imgfs_header)) return ERR_IO;
+
+    //Update the metadta
+    if(fseek(imgfs_file->file, sizeof(struct imgfs_header) +  sizeof(struct img_metadata)*index, SEEK_SET) ) return ERR_IO;
+    if ((fwrite(&imgfs_file->metadata[index], sizeof(char), sizeof(struct img_metadata), imgfs_file->file)) != sizeof(struct img_metadata)) return ERR_IO;
+    
+    return ERR_NONE;
 }
