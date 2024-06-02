@@ -60,7 +60,7 @@ static void* handle_connection(void *arg)
         ssize_t bytes_read = tcp_read(client_socket,
                                       rcvbuf + total,
                                       MAX_HEADER_SIZE + content_len - total);
-        if (bytes_read <= 0) {
+        if (bytes_read < 0) {
             free(rcvbuf);
             rcvbuf = NULL;
             close(client_socket);
