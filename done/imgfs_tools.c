@@ -2,7 +2,7 @@
  * @file imgfs_tools.c
  * @brief implementation of several tool functions for imgFS
  *
- * @author Mia Primorac
+ * @author Marta Adarve de Leon & Imane Oujja
  */
 
 #include "imgfs.h"
@@ -133,6 +133,14 @@ void do_close(struct imgfs_file* imgfs_file)
 
 }
 
+
+/**
+ * @brief Transforms resolution string to its int value.
+ *
+ * @param resolution The resolution string. Shall be "original",
+ *        "orig", "thumbnail", "thumb" or "small".
+ * @return The corresponding value or -1 if error.
+ */
 
 int resolution_atoi (const char* str)
 {

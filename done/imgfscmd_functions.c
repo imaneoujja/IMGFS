@@ -2,7 +2,7 @@
  * @file imgfscmd_functions.c
  * @brief imgFS command line interpreter for imgFS core commands.
  *
- * @author Mia Primorac
+ * @author Marta Adarve de Leon & Imane Oujja
  */
 
 #include "imgfs.h"
@@ -198,18 +198,19 @@ int do_delete_cmd(int argc, char** argv)
  */
 
 static void create_name(const char* img_id, int resolution, char** new_name){
-    if (resolution < 0 || resolution >= NB_RES  || img_id == NULL || new_name == NULL){
+    if (resolution < 0 || resolution >= NB_RES  || !img_id  || !new_name ){
         return;
     }
     const char* resolutions[] = {"_thumb", "_small", "_orig"};
     const char* extension = ".jpg";
+    // Calculate the length of the new name
     size_t name_length = strlen(img_id) + strlen(resolutions[resolution]) + strlen(extension) + 1;
 
     *new_name = (char*) malloc(name_length);
     if (*new_name == NULL) {
         return;
     }
-
+    // Construct the new name
     snprintf(*new_name, name_length, "%s%s%s", img_id, resolutions[resolution], extension);
 }
 
@@ -225,11 +226,14 @@ static int write_disk_image(const char *filename, const char *image_buffer, uint
     // Write content of buffer to file
     size_t bytes_w = fwrite(image_buffer,image_size,1,file);
     fclose(file);
-    if (bytes_w != 1){
-        return ERR_IO;
-    }
+    if (bytes_w != 1) return ERR_IO;
+    
     return ERR_NONE;
 }
+
+/********************************************************************
+ * Inserts an image into the imgFS.
+ *******************************************************************/
 int do_insert_cmd(int argc, char **argv)
 {
     M_REQUIRE_NON_NULL(argv);
@@ -237,6 +241,7 @@ int do_insert_cmd(int argc, char **argv)
 
     struct imgfs_file myfile;
     zero_init_var(myfile);
+    // Open the ImgFS file in read-write mode
     int error = do_open(argv[0], "rb+", &myfile);
     if (error != ERR_NONE) return error;
 
@@ -249,13 +254,17 @@ int do_insert_cmd(int argc, char **argv)
         do_close(&myfile);
         return error;
     }
-
+    // Insert the image into the ImgFS
     error = do_insert(image_buffer, image_size, argv[1], &myfile);
     free(image_buffer);
     do_close(&myfile);
     return error;
 }
 
+
+/********************************************************************
+ * Reads an image from the imgFS.
+ *******************************************************************/
 int do_read_cmd(int argc, char **argv)
 {
     M_REQUIRE_NON_NULL(argv);
@@ -268,27 +277,32 @@ int do_read_cmd(int argc, char **argv)
 
     struct imgfs_file myfile;
     zero_init_var(myfile);
+    // Open the image from the ImgFS
     int error = do_open(argv[0], "rb+", &myfile);
     if (error != ERR_NONE) return error;
 
     char *image_buffer = NULL;
     uint32_t image_size = 0;
+    // Read the image from the ImgFS
     error = do_read(img_id, resolution, &image_buffer, &image_size, &myfile);
     do_close(&myfile);
-    if (error != ERR_NONE) {
-        return error;
-    }
+    if (error != ERR_NONE) return error;
 
     // Extracting to a separate image file.
     char* tmp_name = NULL;
     create_name(img_id, resolution, &tmp_name);
     if (tmp_name == NULL) return ERR_OUT_OF_MEMORY;
     error = write_disk_image(tmp_name, image_buffer, image_size);
+
     free(tmp_name);
     free(image_buffer);
 
     return error;
 }
+
+/********************************************************************
+ * Reads an image from disk into a buffer.
+ *******************************************************************/
 
 int read_disk_image(const char *path, char **image_buffer, uint32_t *image_size) {
     M_REQUIRE_NON_NULL(path);

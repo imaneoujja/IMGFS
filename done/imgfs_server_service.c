@@ -2,7 +2,7 @@
  * @file imgfs_server_service.c
  * @brief ImgFS server part, bridge between HTTP server layer and ImgFS library
  *
- * @author Konstantinos Prasopoulos
+ * @author Marta Adarve de Leon & Imane Oujja
  */
 
 #include <stdio.h>
@@ -67,7 +67,7 @@ int server_startup(int argc, char **argv) {
     return ERR_NONE;
 }
 
-/*
+/*************************
  * Shutdown function. Free the structures and close the file.
  ******************** */
 void server_shutdown (void)
@@ -110,7 +110,7 @@ static int reply_302_msg(int connection)
 }
 
 /************************
- * Simple handling of http message. TO BE UPDATED WEEK 13
+ * Simple handling of http message. UPDATED IN WEEK 13
  ******************** */
 int handle_http_message(struct http_message* msg, int sockfd)
 {
@@ -136,43 +136,64 @@ int handle_http_message(struct http_message* msg, int sockfd)
 }
 
 
-int handle_list_call( int connection){   
+/************************
+ * Handling list calls
+ ******************** */
+int handle_list_call(int connection) {
+    // Set the output mode to JSON
     enum do_list_mode output_mode = JSON;
     char* json;
+
     // List using the do_list function
     int error = do_list(&fs_file, output_mode, &json);
-    if (error != ERR_NONE) {
-        return reply_error_msg(connection, error);
-    }
-    int result = http_reply(connection, "200 OK", "Content-Type: application/json\r\n", json, strlen(json));
-    free(json); // Make sure to free the allocated JSON string
+    if (error != ERR_NONE) return reply_error_msg(connection, error);
+    
+
+    // Send the HTTP reply with the JSON content
+    int result = http_reply(connection, HTTP_OK, "Content-Type: application/json\r\n", json, strlen(json));
+    free(json);
     return result;
 }
 
 
-int handle_delete_call(struct http_message *msg, int sockfd) { 
+/************************
+ * Handling delete calls
+ ******************** */
+int handle_delete_call(struct http_message *msg, int sockfd) {
     char img_id[MAX_IMG_ID];
+
+    // Get the img_id parameter from the URI
     int err = http_get_var(&msg->uri, "img_id", img_id, sizeof(img_id));
     if (err <= 0) {
+        // If the img_id is not provided, reply with an error message
         return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
     }
 
+    // Perform the delete operation
     int ret = do_delete(img_id, &fs_file);
     if (ret != ERR_NONE) {
+        // If there is an error during deletion, reply with the error message
         return reply_error_msg(sockfd, ret);
     }
 
+    // Reply with a 302 redirect message on success
     return reply_302_msg(sockfd);
-} 
+}
+
+/************************
+ * Handling read calls
+ ******************** */
 int handle_read_call(struct http_message *msg, int sockfd) {
     char img_id[MAX_IMG_ID + 1] = {0};
     char res[6] = {0};
     int err;
+
+    // Get the img_id parameter from the URI
     if ((err = http_get_var(&msg->uri, "img_id", img_id, MAX_IMG_ID)) <= 0) {
         return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
     }
 
-    // Check for res parameter
+    // Get the res parameter from the URI
     if ((err = http_get_var(&msg->uri, "res", res, sizeof(res))) <= 0) {
         if (err == 0) {
             return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
@@ -180,55 +201,51 @@ int handle_read_call(struct http_message *msg, int sockfd) {
         return reply_error_msg(sockfd, ERR_RESOLUTIONS);
     }
 
-    // Check if the resolution is invalid
+    // Convert the resolution string to an integer
     int resolution = resolution_atoi(res);
-    if (resolution == -1) {
-        return reply_error_msg(sockfd, ERR_RESOLUTIONS);
-    }
+    if (resolution == -1) return reply_error_msg(sockfd, ERR_RESOLUTIONS);
+    
 
     // Prepare to read the image
     char *image_buffer = NULL;
     uint32_t image_size = 0;
     int error = do_read(img_id, resolution, &image_buffer, &image_size, &fs_file);
 
-    if (error != ERR_NONE) {
-        return reply_error_msg(sockfd, error);
-    }
+    if (error != ERR_NONE) return reply_error_msg(sockfd, error);
+
 
     // Send the response with the image
-    int result = http_reply(sockfd, "200 OK", "Content-Type: image/jpeg\r\n", image_buffer, image_size);
+    int result = http_reply(sockfd, HTTP_OK, "Content-Type: image/jpeg\r\n", image_buffer, image_size);
 
-    // Free the image buffer after use
     free(image_buffer);
-
     return result;
+
 }
 
-
-
+// Function to handle insert calls
 int handle_insert_call(struct http_message *msg, int sockfd) {
     char img_id[MAX_IMG_ID + 1];
+
+    // Get the name parameter from the URI
     int err = http_get_var(&msg->uri, "name", img_id, MAX_IMG_ID);
 
-    if (msg->body.len == 0 || err<=0) {
-        return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
-    }
+    // Check if the body is empty or the name parameter is not provided
+    if (msg->body.len == 0 || err <= 0)  return reply_error_msg(sockfd, ERR_NOT_ENOUGH_ARGUMENTS);
+    
 
-    char *image_buffer = calloc(1,msg->body.len);
-    if (image_buffer == NULL) {
-        return reply_error_msg(sockfd, ERR_OUT_OF_MEMORY);
-    }
+    // Allocate memory for the image buffer
+    char *image_buffer = calloc(1, msg->body.len);
+    if (image_buffer == NULL) return reply_error_msg(sockfd, ERR_OUT_OF_MEMORY);
+    
 
+    // Copy the image data to the buffer
     memcpy(image_buffer, msg->body.val, msg->body.len);
 
+    // Perform the insert operation
     int ret = do_insert(image_buffer, msg->body.len, img_id, &fs_file);
     free(image_buffer);
 
-    if (ret != ERR_NONE) {
-        return reply_error_msg(sockfd, ret);
-    }
-
+    if (ret != ERR_NONE) return reply_error_msg(sockfd, ret);
+    
     return reply_302_msg(sockfd);
 }
-
-

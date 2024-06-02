@@ -105,5 +105,4 @@ int do_list(const struct imgfs_file *imgfs_file,
         return ERR_INVALID_ARGUMENT;
     }
 
-
 }

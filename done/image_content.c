@@ -28,20 +28,17 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
     if (index >= imgfs_file->header.max_files || imgfs_file->metadata[index].is_valid == 0) {
         return ERR_INVALID_IMGID;
     }
+
     if (resolution != THUMB_RES && resolution != SMALL_RES && resolution != ORIG_RES) {
         return ERR_RESOLUTIONS;
     }
 
     // If the requested image already exists in the corresponding resolution, do nothing;
-    if (resolution == ORIG_RES) {
-        return ERR_NONE;
-    }
-
-
+    if (resolution == ORIG_RES) return ERR_NONE;
+    
     // Check if the image already exists in the requested resolution
-    if (imgfs_file->metadata[index].size[resolution] != 0) {
-        return ERR_NONE;
-    }
+    if (imgfs_file->metadata[index].size[resolution] != 0) return ERR_NONE;
+    
 
     // Read the original image from disk into buffer and allocate space for buffer
     VipsImage *original_image;
@@ -113,11 +110,19 @@ int lazily_resize(int resolution, struct imgfs_file* imgfs_file, size_t index)
         return ERR_IO;
     }
 
-
     return ERR_NONE;
 }
 
 
+/**
+ * @brief Gets the resolution of an image.
+ *
+ * @param height Where to put the calculated image height.
+ * @param width Where to put the calculated image width.
+ * @param image_buffer The image content.
+ * @param image_size The size of the image (size of image_buffer).
+ * @return Some error code. 0 if no error.
+ */
 
 int get_resolution(uint32_t *height, uint32_t *width,
                    const char *image_buffer, size_t image_size) {

@@ -3,7 +3,7 @@
  * @file imgfs_server.c
  * @brief ImgFS server part, main
  *
- * @author Konstantinos Prasopoulos
+ * @author Marta Adarve de Leon & Imane Oujja
  */
 
 #include "util.h"
@@ -19,13 +19,19 @@
 #include <unistd.h>
 #include <stdlib.h> // abort()
 
-/************************/
+/************************
+Signal handler function to handle termination signals.
+ *************************/
+
 static void signal_handler(int sig_num) {
     server_shutdown();
     exit(EXIT_SUCCESS);  // Ensure clean exit
 }
 
-/************************/
+/************************
+ Sets up the signal handler for termination signals.
+ *************************/
+
 static void set_signal_handler(void)
 {
     struct sigaction action;
@@ -42,10 +48,12 @@ static void set_signal_handler(void)
     }
 }
 
-/************************/
 
-int main (int argc, char *argv[])
-{
+
+/************************
+Main function for the ImgFS server.
+ *************************/
+int main (int argc, char *argv[]){
 
     int err = server_startup(argc, argv);
     if (err != ERR_NONE) {

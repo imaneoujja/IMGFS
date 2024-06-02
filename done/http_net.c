@@ -31,7 +31,6 @@ MK_OUR_ERR(ERR_OUT_OF_MEMORY);
 MK_OUR_ERR(ERR_IO);
 
 static void* handle_connection(void *arg) {
-    // Avoid SIGINT and SIGTERM signals (left to the main thread)
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT );
@@ -40,60 +39,56 @@ static void* handle_connection(void *arg) {
 
     if (arg == NULL) return &our_ERR_INVALID_ARGUMENT;
     int socketId = *(int *)arg;
-// agv free, ;clsose(socketID)
     char *rcvbuf = calloc(1, MAX_HEADER_SIZE);
     if (!rcvbuf) {
-        perror("Failed to allocate buffer");
         return &our_ERR_OUT_OF_MEMORY;
     }
 
     ssize_t bytes_read;
-    size_t total_read = 0;
-    int content_length = 0;
+    size_t total = 0;
+    int content_len = 0;
     struct http_message http_msg = {0};
-    int parse_result;
-    int buffer_size = MAX_HEADER_SIZE;
-    int extension_done = 0;
+    int parsed_message;
+    int buffer = MAX_HEADER_SIZE;
+    int extended = 0;
 
     while (1) {
-        bytes_read = tcp_read(socketId, rcvbuf + total_read, buffer_size);
+        bytes_read = tcp_read(socketId, rcvbuf + total, buffer);
         if (bytes_read < 0) {
-            perror("tcp_read error");
             free(rcvbuf);
             return &our_ERR_IO;
         } else if (bytes_read == 0) break;
 
-        total_read += bytes_read;
+        total += bytes_read;
 
-        parse_result = http_parse_message(rcvbuf, total_read, &http_msg, &content_length);
-        if (parse_result < 0) {
+        parsed_message = http_parse_message(rcvbuf, total, &http_msg, &content_len);
+        if (parsed_message < 0) {
             free(rcvbuf);
             return &our_ERR_INVALID_ARGUMENT;
         }
 
-        if (parse_result == 0 && !extension_done && content_length > 0 && total_read < content_length + MAX_HEADER_SIZE) {
-            buffer_size = content_length + MAX_HEADER_SIZE;
-            char *new_buf = realloc(rcvbuf, buffer_size);
+        if (parsed_message == 0 && !extended && content_len > 0 && total < content_len + MAX_HEADER_SIZE) {
+            buffer = content_len + MAX_HEADER_SIZE;
+            char *new_buf = realloc(rcvbuf, buffer);
             if (new_buf == NULL) {
-                perror("Failed to extend buffer");
                 free(rcvbuf);
                 return &our_ERR_OUT_OF_MEMORY;
             }
             rcvbuf = new_buf;
-            extension_done = 1;
+            extended = 1;
         }
 
-        if (parse_result == 1) {
+        if (parsed_message == 1) {
             cb(&http_msg, socketId);
 
-            memset(rcvbuf, 0, buffer_size);
-            total_read = 0;
-            content_length = 0;
-            parse_result = 0;
-            extension_done = 0;
+            memset(rcvbuf, 0, buffer);
+            total = 0;
+            content_len = 0;
+            parsed_message = 0;
+            extended = 0;
         }
 
-        if (total_read >= buffer_size) {
+        if (total >= buffer) {
             free(rcvbuf);
             return &our_ERR_IO;
         }
@@ -110,7 +105,6 @@ static void* handle_connection(void *arg) {
 int http_init(uint16_t port, EventCallback callback)
 {
     passive_socket = tcp_server_init(port);
-    printf("HELLO\n");
 
     cb = callback;
     return passive_socket;
@@ -234,56 +228,38 @@ int http_serve_file(int connection, const char* filename)
 int http_reply(int connection, const char* status, const char* headers, const char* body, size_t body_len) {
     M_REQUIRE_NON_NULL(status);
     M_REQUIRE_NON_NULL(headers);
+    
     if (body_len !=0) M_REQUIRE_NON_NULL(body);
 
-    const char* protocol = HTTP_PROTOCOL_ID;
-    const char* content_length_text = "Content-Length: ";
-    int body_len_chars = (body_len == 0) ? 1 : (int)(log10(body_len) + 1);
+    size_t rcvbuf = strlen(HTTP_PROTOCOL_ID) + strlen(status)
+                        + strlen(HTTP_LINE_DELIM) + strlen(headers)
+                        + strlen("Content-Length: ")
+                        + ((body_len == 0) ? 1 : (int)(log10(body_len) + 1))
+                        + strlen(HTTP_HDR_END_DELIM) + body_len + 1;
 
-    size_t buffer_size = strlen(HTTP_PROTOCOL_ID)
-                        + strlen(status)
-                        + strlen(HTTP_LINE_DELIM)
-                        + strlen(headers)
-                        + strlen(content_length_text)
-                        + body_len_chars
-                        + strlen(HTTP_HDR_END_DELIM)
-                        + body_len
-                        + 1;
+    char* buffer = (char*)calloc(rcvbuf, 1);
+    if (buffer == NULL) return our_ERR_OUT_OF_MEMORY;
 
-    char* buffer = (char*)calloc(buffer_size, 1);
-    if (buffer == NULL) {
-        perror("Failed to allocate memory for response buffer");
-        return our_ERR_OUT_OF_MEMORY;
-    }
+    int content = snprintf(buffer, rcvbuf, "%s%s%s%s%s%zu%s", HTTP_PROTOCOL_ID, status, 
+                  HTTP_LINE_DELIM, headers, "Content-Length: ", body_len, HTTP_HDR_END_DELIM);
 
-    int written = snprintf(buffer, buffer_size, "%s%s%s%s%s%zu%s", protocol,
-                           status, HTTP_LINE_DELIM, headers,
-                           content_length_text, body_len, HTTP_HDR_END_DELIM);
-
-    if (written < 0 || written >= buffer_size) {
-        perror("Failed to write response header");
+    if (content < 0 || content >= rcvbuf) {
         free(buffer);
         return our_ERR_INVALID_ARGUMENT;
     }
 
-    if (body != NULL) {
-        memcpy(buffer + written, body, body_len);
-    }
-    int total_sent = 0;
-    // Send the response in a loop to handle partial sends
-    while (total_sent < written + body_len) {
-        ssize_t sent = tcp_send(connection, buffer + total_sent, written + body_len - total_sent);
+    if (body != NULL)  memcpy(buffer + content, body, body_len);
+    
+    int total = 0;
+
+    while (total < content + body_len) {
+        ssize_t sent = tcp_send(connection, buffer + total, content + body_len - total);
         if (sent < 0) {
-            perror("Failed to send complete response");
             free(buffer);
             return ERR_IO;
         }
-        total_sent += sent;
+        total += sent;
     }
     free(buffer);
-    perror("HELLO");
     return our_ERR_NONE;
-
- 
-
 }
