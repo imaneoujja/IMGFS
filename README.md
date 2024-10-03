@@ -1,6 +1,6 @@
 ## Overview
 
-ImgFS is an image-oriented file system designed for efficient management and retrieval of images. Inspired by Facebook's Haystack system, ImgFS allows users to interact with images through a command-line interface (CLI) and an HTTP server. The primary goal is to provide a simple way to store, access, and manage images while offering a familiar user experience for both CLI and web clients.
+This project is part of CS-202 Computer Systems course at EPFL. ImgFS is an image-oriented file system designed for efficient management and retrieval of images. Inspired by Facebook's Haystack system, ImgFS allows users to interact with images through a command-line interface (CLI) and an HTTP server. The primary goal is to provide a simple way to store, access, and manage images while offering a familiar user experience for both CLI and web clients.
 
 ## Implementation
 
